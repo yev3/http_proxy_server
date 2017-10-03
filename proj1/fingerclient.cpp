@@ -13,42 +13,36 @@
 #include <netdb.h>
 #include <unistd.h>
 
-std::ostream& operator<<(std::ostream &strm, sockaddr &aiAddr) {
-  if (aiAddr.sa_family == AF_INET) {
-    const sockaddr_in& sock = reinterpret_cast<sockaddr_in const&>(aiAddr);
-    strm << "Addr: " << std::hex << *(ulong*)(&sock.sin_addr) << std::endl;
-    strm << "Port: " << sock.sin_port << std::endl;
-  } else if (aiAddr.sa_family == AF_INET6) {
-    const sockaddr_in6& sock = reinterpret_cast<sockaddr_in6 const&>(aiAddr);
-    strm << "Addr: " << std::hex << *(char(*)[16])&sock.sin6_addr << std::endl;
-    strm << "Port: " << sock.sin6_port << std::endl;
-  } else {
-    strm << "???";
-  }
-
-  return strm;
-}
-
-int copyUntilEOF(int fdFm, int fdTo) {
+/**
+ * \brief Copies characters from one file descriptor to another until EOF
+ * \param fdSrc source file descriptor
+ * \param fdDst destination file descriptor
+ * \return 0 on success, errno otherwise
+ */
+int copyUntilEOF(const int fdSrc, const int fdDst) {
   char c;
   while (true) {
-    int readResult = read(fdFm, &c, 1);
-
-    switch (readResult) {
+    switch (read(fdSrc, &c, 1)) {
     case -1:
       if (errno != EINTR) return -1;  // return an error unless interrupted
       break;
     case 0:
       return 0; // EOF
     default:
-      write(fdTo, &c, 1);
+      write(fdDst, &c, 1);
     }
   }
 }
 
+void errorExit(const char *msg) {
+  perror(msg);
+  exit(errno);
+}
+
+
 int main(const int argc, char *argv[]) {
   if (argc != 2) {
-    std::cout << "Program must be called with one argument." << std::endl;
+    std::cout << "usage: fingerclient user@host:port" << std::endl;
     exit(-1);
   }
 

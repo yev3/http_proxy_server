@@ -12,22 +12,54 @@
 #include <netdb.h>
 #include <signal.h>
 #include <sstream>
+#include <sys/wait.h>
+#include <cstring>
 
-void execCommand(std::string &line);
+/**
+ * \brief displays an error message with a message string
+ * \param msg Message to display when exiting
+ */
+void errorExit(const char *msg) {
+  perror(msg);
+  exit(errno);
+}
 
-int main(int argc, char *argv[]) {
-  if (argc != 2) {
-    std::cerr << "Program must be called with one argument." << std::endl;
-    exit(-1);
-  }
+/**
+ * \brief Displays an errno string and message
+ * \param msg Message to display to user 
+ */
+void errorLog(const char *msg) {
+  std::cerr << msg << ": " << strerror(errno) << std::endl;
+}
 
-  std::stringstream strm{argv[1]};
-  int portNo;
-  strm >> portNo;
+/**
+ * \brief reaps the zombie children
+ * \param sig unused argument
+ */
+void processZombieChildren(int sig) {
+  int savedErr = errno;
+  while (waitpid(-1, nullptr, WNOHANG) > 0) {}
+  errno = savedErr;
 
-  std::cout << "Attempting to attach to port: " << portNo << ".." << std::flush;
+}
 
-  // GETADDRINFO
+void handleClient(int fdClient) {
+  char buf[256] = {0};
+  read(fdClient, buf, 255);
+
+  std::string userName;
+  std::stringstream strm{buf};
+  std::getline(strm, userName);
+
+  std::cout << "Received: " << userName << std::endl;
+
+  dup2(fdClient, STDOUT_FILENO);
+  dup2(fdClient, STDERR_FILENO);
+  execlp("finger", "finger", userName.c_str(), 0);
+  errorExit("execlp");
+}
+
+addrinfo* getAddrFromPort(int portNo) {
   addrinfo hints = {0};
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_family = AF_UNSPEC;
@@ -36,94 +68,96 @@ int main(int argc, char *argv[]) {
   hints.ai_addr = nullptr;
   hints.ai_next = nullptr;
 
+  addrinfo *addrInfo;
+  if (0 != getaddrinfo(nullptr,
+                       std::to_string(portNo).c_str(),
+                       &hints,
+                       &addrInfo)) {
+    errorExit("getAddrFromPort");
+  }
+  return addrInfo;
+}
+
+void setupGrimReaper() {
+  struct sigaction sa;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = SA_RESTART;
+  sa.sa_handler = processZombieChildren;
+  if (sigaction(SIGCHLD, &sa, nullptr) == -1) {
+    errorExit("sigaction");
+  }
+}
+
+int main(int argc, char *argv[]) {
+  if (argc != 2) {
+    std::cout << "usage: fingerserver port" << std::endl;
+    exit(-1);
+  }
+
+  std::stringstream strm{argv[1]};
+  int portNo;
+  strm >> portNo;
+
+  addrinfo *addr = getAddrFromPort(portNo);
+
   // ignore SIGPIPEs
   signal(SIGPIPE, SIG_IGN);
 
-  // getaddrinfo
-  addrinfo *addrInfoResult;
-  if (0 != getaddrinfo(nullptr, std::to_string(portNo).c_str(), &hints,
-                       &addrInfoResult)) {
-    perror("getaddrinfo");
-    exit(-1);
-  }
-
   // bind the socket
-  bool sockBound = false;
   int fdListen;
   addrinfo *curAddr;
   int optVal = 1;
-  for (curAddr = addrInfoResult; !sockBound && curAddr != nullptr;
-       curAddr = curAddr->ai_next) {
-    fdListen = socket(curAddr->ai_family, curAddr->ai_socktype,
+  for (curAddr = addr; curAddr != nullptr; curAddr = curAddr->ai_next) {
+    fdListen = socket(curAddr->ai_family,
+                      curAddr->ai_socktype,
                       curAddr->ai_protocol);
 
-    if (fdListen == -1) continue;
+    if (fdListen != -1) {
 
-    if (setsockopt(fdListen, SOL_SOCKET, SO_REUSEADDR, &optVal, sizeof(optVal)) == -1) {
-      
-    }
-
-      if (bind(fdListen, curAddr->ai_addr, curAddr->ai_addrlen) != -1) {
-        sockBound = true;
-      } else {
-        close(fdListen);
+      if (setsockopt(fdListen, SOL_SOCKET, SO_REUSEADDR, &optVal,
+                     sizeof optVal) == -1) {
+        errorExit("setsockopt");
       }
+
+      if (-1 == bind(fdListen, curAddr->ai_addr, curAddr->ai_addrlen)) {
+        close(fdListen);
+        continue;
+      }
+
+      break;
+    }
   }
 
-  if (!sockBound) {
-    std::cerr << "Could not bind a socket." << std::endl;
-    exit(-1);
-  }
+  freeaddrinfo(addr);
+
+  if (curAddr == nullptr) errorExit("Could not bind a socket");
 
   // make the socket listen
   const int BACKLOG = 50;
-  if (listen(fdListen, BACKLOG) == -1) {
-    perror("Socket listen");
-    exit(errno);
-  }
+  if (listen(fdListen, BACKLOG) == -1) errorExit("listen");
 
-  freeaddrinfo(addrInfoResult);
-
-  sockaddr_storage clientAddress;
-  socklen_t clientAddressLen = sizeof(sockaddr_storage);
-  int fdClient = accept(fdListen, reinterpret_cast<sockaddr*>(&clientAddress),
-                        &clientAddressLen);
+  // ensure we don't get zombie processes
+  setupGrimReaper();
 
   while (true) {
-
-    std::cout << "\nEnter username: " << std::flush;
-    std::string line;
-    std::getline(std::cin, line);
-
-    if (!line.empty() && std::tolower(line[0]) == 'q') {
-      exit(0);
+    int fdClient = accept(fdListen, nullptr, nullptr);
+    if (fdClient == -1) {
+      errorLog("error accepting");
+      continue;
     }
 
-    execCommand(line);
+    switch (fork()) {
+    case -1:  // parent
+      errorLog("fork");
+      break;
+    case 0:   // child
+      close(fdListen);
+      handleClient(fdClient);
+    default:  // parent
+      break;
+    }
 
-    std::cout << "You entered: " << line << std::endl;
+    // parent does not need the client fd
+    close(fdClient); 
   }
-
-}
-
-void execCommand(std::string &line) {
-  pid_t child = fork();
-
-  std::cout << "About to finger.." << std::endl;
-  switch (child) {
-  case -1:
-    std::cout << "fork error" << std::endl;
-    exit(-1);
-  case 0:
-    // CHILD
-    execlp("finger", "finger", line.c_str(), 0);
-    perror("Should not have returned from execlp()..");
-    //std::cout << "Error: should not have returned from execlp().." << std::endl;
-    _exit(-1);
-  default:
-    // PARENT
-    std::cout << "Parent returns.." << std::endl;
-    break;
-  }
-
 }
