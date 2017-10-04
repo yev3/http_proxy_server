@@ -13,6 +13,120 @@
 #include <netdb.h>
 #include <unistd.h>
 
+
+/**
+ * \brief Exits the program, displaying the error string
+ * \param msg message to display
+ */
+void errorExit(const char *msg) {
+  perror(msg);
+  exit(errno);
+}
+
+/**
+ * \brief Holds user's argument information
+ */
+class FingerArguments {
+public:
+  std::string username; ///< username from the command line
+  std::string hostname; ///< hostname from the command line
+  int portNo = -1; ///< port number
+
+  /**
+   * \brief parses the connection string and initializes the argument values
+   * \param argc argument count
+   * \param argv c-style string from args
+   */
+  FingerArguments(const int argc, const char *argv[]) {
+    if (argc == 2) {
+      std::stringstream argStrm{ argv[1] };
+      std::getline(argStrm, username, '@');
+      std::getline(argStrm, hostname, ':');
+      argStrm >> portNo;
+    }
+  }
+
+  /**
+   * \brief Returns true when the user-supplied arguments are valid
+   * \return true if the user-supplied arguments are valid
+   */
+  bool isValid() const {
+    return !(username.empty() || hostname.empty() || portNo == -1);
+  }
+};
+
+class ClientAddrInfo {
+public:
+  ClientAddrInfo(const std::string &hostname, const int port) {
+    addrinfo hints = { 0 };
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_flags = AI_NUMERICSERV; // port no is numeric
+    hints.ai_canonname = nullptr;
+    hints.ai_addr = nullptr;
+    hints.ai_next = nullptr;
+    if (0 != getaddrinfo(hostname.c_str(),
+      std::to_string(port).c_str(),
+      &hints,
+      &head)) {
+      errorExit("getaddrinfo");
+    }
+    nextVal = head;
+  }
+
+  ~ClientAddrInfo() {
+    freeaddrinfo(head);
+  }
+
+  addrinfo* next() {
+    addrinfo *curr = nextVal;
+    if (nextVal != nullptr)
+      nextVal = nextVal->ai_next;
+    return curr;
+  }
+
+private:
+  addrinfo *head = nullptr;
+  addrinfo *nextVal = nullptr;
+};
+
+class ClientConnection {
+public:
+  ClientConnection(const std::string &hostname, const int port) {
+    ClientAddrInfo resolvedAddr{ hostname, port };
+    addrinfo *cur;
+
+    while ((cur = resolvedAddr.next()) != nullptr) {
+      sockFd = socket(cur->ai_family, cur->ai_socktype,
+        cur->ai_protocol);
+      if (sockFd != -1) {
+        if (connect(sockFd, cur->ai_addr, cur->ai_addrlen) != -1) {
+          return;
+        }
+        close(sockFd);
+        sockFd = -1;
+      }
+    }
+  }
+
+  ~ClientConnection() {
+    if (sockFd != -1) {
+      close(sockFd);
+    }
+  }
+
+  int fd() const {
+    return sockFd;
+  }
+
+  bool isConnected() const {
+    return sockFd != -1;
+  }
+
+private:
+  int sockFd = -1; ///< socket file descriptor
+};
+
 /**
  * \brief Copies characters from one file descriptor to another until EOF
  * \param fdSrc source file descriptor
@@ -24,7 +138,7 @@ int copyUntilEOF(const int fdSrc, const int fdDst) {
   while (true) {
     switch (read(fdSrc, &c, 1)) {
     case -1:
-      if (errno != EINTR) return -1;  // return an error unless interrupted
+      if (errno != EINTR) return -1; // return an error unless interrupted
       break;
     case 0:
       return 0; // EOF
@@ -34,83 +148,24 @@ int copyUntilEOF(const int fdSrc, const int fdDst) {
   }
 }
 
-void errorExit(const char *msg) {
-  perror(msg);
-  exit(errno);
-}
-
-
-int main(const int argc, char *argv[]) {
-  if (argc != 2) {
+int main(const int argc, const char *argv[]) {
+  FingerArguments userArgs{ argc, argv };
+  if (!userArgs.isValid()) {
     std::cout << "usage: fingerclient user@host:port" << std::endl;
     exit(-1);
   }
 
-  std::string username;
-  std::string hostname;
-  int portNo = -1;
+  ClientConnection conn{ userArgs.hostname, userArgs.portNo };
 
-  std::stringstream argStrm{ argv[1] };
-  std::getline(argStrm, username, '@');
-  std::getline(argStrm, hostname, ':');
-  argStrm >> portNo;
-  std::string portNoStr = std::to_string(portNo);
-
-  std::cout << "Username: " << username << std::endl;
-  std::cout << "Hostname: " << hostname << std::endl;
-  std::cout << "Port no : " << portNo << std::endl;
-
-  // GETADDRINFO
-
-  addrinfo hints = { 0 };
-  hints.ai_socktype = SOCK_STREAM;
-  hints.ai_family = AF_UNSPEC;
-  hints.ai_flags = AI_NUMERICSERV;  // port no is numeric
-  hints.ai_canonname = nullptr;
-  hints.ai_addr = nullptr;
-  hints.ai_next = nullptr;
-
-  addrinfo *addrInfoResult;
-  if (0 != getaddrinfo(hostname.c_str(), portNoStr.c_str(), &hints, &addrInfoResult)) {
-    perror("getaddrinfo");
-    exit(-1);
+  if (!conn.isConnected()) {
+    errorExit("cannot connect to socket");
   }
 
-  //std::cout << "getaddrinfo() results: " << std::endl;
-  //std::cout << "---Result---" << std::endl;
-  //std::cout << "ai_addr: \n" << *r->ai_addr << std::endl;
-  bool sockConnected = false;
-  int sockfd;
-  addrinfo *curAddr;
-  for (curAddr = addrInfoResult; !sockConnected && curAddr != nullptr; curAddr = curAddr->ai_next) {
-    sockfd = socket(curAddr->ai_family, curAddr->ai_socktype, curAddr->ai_protocol);
-    if (sockfd != -1) {
-      if (connect(sockfd, curAddr->ai_addr, curAddr->ai_addrlen) != -1) {
-        sockConnected = true;
-      } else {
-        close(sockfd);
-      }
-    }
+  write(conn.fd(), userArgs.username.c_str(), userArgs.username.size() + 1);
+
+  if (copyUntilEOF(conn.fd(), STDOUT_FILENO) != 0) {
+    errorExit("copying socket to stdout");
   }
-
-  if (!sockConnected) {
-    std::cerr << "Could not create a socket." << std::endl;
-    exit(-1);
-  }
-
-  freeaddrinfo(addrInfoResult);
-
-  write(sockfd, username.c_str(), username.size() + 1);
-
-  int copyResult = copyUntilEOF(sockfd, STDOUT_FILENO);
-  close(sockfd);
-
-  if (copyResult != 0) {
-    perror("Copying socket: ");
-    exit(copyResult);
-  }
-
-  std::cout << "Finished, exiting..." << std::endl;
 
   return 0;
 }

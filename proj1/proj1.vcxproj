@@ -91,6 +91,9 @@
       <FileType>Document</FileType>
     </Resource>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="fingerclient.h" />
+  </ItemGroup>
   <ItemDefinitionGroup />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
