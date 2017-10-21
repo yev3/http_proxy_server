@@ -1,8 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Project1, CPSC 5510 Networking, Seattle University
-// Yevgeni Kamenski
+// Project2, CPSC 5510 Networking, Seattle University
 // 
-// fingerserver.cpp - 09/26/2017 3:51 PM
+// proxy.cpp
 // 
 // This is free and unencumbered software released into the public domain.
 ////////////////////////////////////////////////////////////////////////////////
@@ -14,12 +13,13 @@
 #include <sstream>
 #include <sys/wait.h>
 #include <cstring>
+#include <vector>
 
 /**
  * \brief exits the program displaying proper usage
  */
 void exitUsage() {
-  std::cout << "usage: fingerserver port" << std::endl;
+  std::cout << "usage: proxy port" << std::endl;
   exit(-1);
 }
 
@@ -64,25 +64,6 @@ void setupGrimReaper() {
   }
 }
 
-/**
- * \brief processes a client connection
- * \param clientFd connected client socket file descriptor
- */
-void handleClient(const int clientFd) {
-  // receive username string from user
-  char buf[256] = {0}; // typically max username is 71, but saw 256 also
-  read(clientFd, buf, 255);
-
-  // strip any newlines
-  std::string userName;
-  std::stringstream strm{buf};
-  std::getline(strm, userName);
-
-  dup2(clientFd, STDOUT_FILENO);
-  dup2(clientFd, STDERR_FILENO);
-  execlp("finger", "finger", userName.c_str(), 0);
-  errorExit("execlp"); // should not get here
-}
 
 /**
  * \brief Helper for resolving addresses for the server
@@ -94,7 +75,7 @@ public:
    * \param port port number to listen to
    */
   ServerAddrInfo(const int port) {
-    addrinfo hints = {0};
+    addrinfo hints = { 0 };
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_family = AF_UNSPEC;
     hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
@@ -102,9 +83,9 @@ public:
     hints.ai_addr = nullptr;
     hints.ai_next = nullptr;
     if (0 != getaddrinfo(nullptr,
-                         std::to_string(port).c_str(),
-                         &hints,
-                         &head)) {
+      std::to_string(port).c_str(),
+      &hints,
+      &head)) {
       errorExit("getaddrinfo");
     }
     nextVal = head;
@@ -143,17 +124,17 @@ public:
    * \param port port number to bind the socket to
    */
   ServerConnection(const int port) {
-    ServerAddrInfo resolvedAddr{port};
+    ServerAddrInfo resolvedAddr{ port };
     int optVal = 1;
     addrinfo *cur;
 
     while ((cur = resolvedAddr.next()) != nullptr) {
       listenFd = socket(cur->ai_family, cur->ai_socktype,
-                        cur->ai_protocol);
+        cur->ai_protocol);
       if (listenFd != -1) {
 
         if (setsockopt(listenFd, SOL_SOCKET, SO_REUSEADDR, &optVal,
-                       sizeof optVal) == -1) {
+          sizeof optVal) == -1) {
           errorExit("setsockopt");
         }
 
@@ -195,16 +176,149 @@ private:
   int listenFd = -1; ///< socket file descriptor
 };
 
+/**
+ * \brief reads a line
+ * \param fd file descriptor to read from
+ * \param buf buffer to store
+ * \param size buffer size
+ * \return number of chars actually read
+ */
+int readLine(const int fd, char* buf, int size)
+{
+  int numRead = 0;   ///< how many were read
+  char c;
+  for (;;) {
+    int r = read(fd, &c, 1);
+    if (r == -1)
+    {
+      if (errno != EINTR) return -1; // return an error unless interrupted
+    } else if (r == 0)
+    {
+      break;
+    } else {
+      if ('\n' == c) break;
+      *buf++ = c;
+      ++numRead;
+    }
+    // when used up the entire buffer
+    if (numRead == (size - 1)) break;
+  }
+
+  if (0 != numRead)
+  {
+    *buf = '\0';
+  }
+
+  return numRead;
+}
+
+
+/**
+ * \brief Copies LINES from one file descriptor to another until CRCL
+ * \param fdSrc source file descriptor
+ * \param fdDst destination file descriptor
+ * \return 0 on success, errno otherwise
+ */
+int copyLines(const int fdSrc, const int fdDst) {
+  static const int bufSize = 256;
+  static char buf[256];
+  bool lastLineFull = false;
+  static char nl = '\n';
+  while (true) {
+    int lineSize = readLine(fdSrc, buf, bufSize);
+    if (lineSize >= 0) {
+      write(fdDst, buf, lineSize);
+      write(fdDst, &nl, 1);
+    } else {
+      return lineSize;  // error occurred
+    }
+    if (!lastLineFull)
+    {
+      if (lineSize == 1 && buf[0] == '\r') return 0;
+    }
+    lastLineFull = lineSize == 255;
+  }
+}
+
+bool isBlankNewline(const char* buf, int size)
+{
+  return size == 1 && buf[0] == '\r';
+
+}
+
+/**
+ * \brief returns a collection of lines from user's request
+ * \param fd socket file descriptor
+ * \return header lines
+ */
+std::vector<std::string> getHeaderLines(const int fd)
+{
+  std::vector<std::string> lines;
+  std::stringstream line;
+  static const int bufSize = 256;
+  static char buf[bufSize];
+
+  while (true) {
+    int lineSize = readLine(fd, buf, bufSize);
+    if (lineSize < 0) break;    // error occurred
+    if (isBlankNewline(buf, lineSize)) break;  // blank newline
+    lines.emplace_back(buf, lineSize);
+  }
+  return lines;
+}
+
+/**
+ * \brief Copies characters from one file descriptor to another until CRCL
+ * \param fdSrc source file descriptor
+ * \param fdDst destination file descriptor
+ * \return 0 on success, errno otherwise
+ */
+int copyUntilCrLn(const int fdSrc, const int fdDst) {
+  char c;
+  while (true) {
+    switch (read(fdSrc, &c, 1)) {
+    case -1:
+      if (errno != EINTR) return -1; // return an error unless interrupted
+      break;
+    case 0:
+      return 0; // EOF
+    default:
+      write(fdDst, &c, 1);
+    }
+  }
+}
+
+/**
+ * \brief processes a client connection
+ * \param clientFd connected client socket file descriptor
+ */
+void handleClient(const int clientFd) {
+
+  // receive username string from user
+  char buf[256] = { 0 }; // typically max username is 71, but saw 256 also
+  read(clientFd, buf, 255);
+
+  // strip any newlines
+  std::string userName;
+  std::stringstream strm{ buf };
+  std::getline(strm, userName);
+
+  dup2(clientFd, STDOUT_FILENO);
+  dup2(clientFd, STDERR_FILENO);
+  execlp("finger", "finger", userName.c_str(), 0);
+  errorExit("execlp"); // should not get here
+}
+
 int main(int argc, char *argv[]) {
   if (argc != 2) {
-    std::cout << "usage: fingerserver port" << std::endl;
+    std::cout << "usage: proxy port" << std::endl;
     exit(-1);
   }
 
   int portNo;
-  (std::stringstream{argv[1]}) >> portNo;
+  (std::stringstream{ argv[1] }) >> portNo;
 
-  ServerAddrInfo resolvedAddr{portNo};
+  ServerAddrInfo resolvedAddr{ portNo };
 
   // ignore SIGPIPEs
   signal(SIGPIPE, SIG_IGN);
@@ -229,15 +343,30 @@ int main(int argc, char *argv[]) {
       continue;
     }
 
-    switch (fork()) {
-    case 0: // child
-      close(conn.fd());
-      handleClient(clientFd);
-    case -1: // parent
-      errorLog("fork");
-    default: // parent
-      break;
+    // TODO: make this multi-client
+    //switch (fork()) {
+    //case 0: // child
+    //  close(conn.fd());
+    //  handleClient(clientFd);
+    //case -1: // parent
+    //  errorLog("fork");
+    //default: // parent
+    //  break;
+    //}
+
+    std::cout << "\nTrace - client connected.." << std::endl;
+
+    std::vector<std::string> header = getHeaderLines(clientFd);
+    for (size_t i = 0; i < header.size(); ++i)
+    {
+      std::cout << "header[" << i << "]: " << header[i] << std::endl;
     }
+
+    //if (copyLines(clientFd, STDOUT_FILENO) != 0) {
+    //  errorExit("copying socket to stdout");
+    //}
+    std::cout << "\nTrace - found CRLN, client done." << std::endl;
+
     close(clientFd); // parent does not need the client fd
   }
 }
