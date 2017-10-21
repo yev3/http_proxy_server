@@ -267,6 +267,70 @@ std::vector<std::string> getHeaderLines(const int fd)
   return lines;
 }
 
+struct RequestElements
+{
+  std::string type;
+  std::string url;
+  std::string protocol;
+};
+
+RequestElements parseFirstLine(std::string& line)
+{
+  std::stringstream strm{ line };
+  RequestElements req;
+  strm >> req.type;
+  strm >> req.url;
+  strm >> req.protocol;
+  return req;
+}
+
+enum class UriParseErrType
+{
+  Success, NotHttp, Malformed
+};
+
+std::ostream& operator<<(std::ostream& strm, UriParseErrType& err)
+{
+  switch (err) {
+  case UriParseErrType::Success: return strm << "Success";
+  case UriParseErrType::NotHttp: return strm << "NotHttp";
+  case UriParseErrType::Malformed: return strm << "Malformed";
+  default: return strm << "???";
+  }
+}
+
+
+struct UriElements
+{
+  std::string scheme;
+  std::string authority;
+  std::string path;
+};
+
+UriParseErrType parseUri(std::string& absolutePath, UriElements& uri)
+{
+  std::stringstream strm{ absolutePath };
+
+  std::getline(strm, uri.scheme, ':');
+  if (uri.scheme != "http") return UriParseErrType::NotHttp;
+
+  for (int i = 0; i < 2; ++i) {
+    char c;
+    strm >> c;
+    // do not continue if '//' is not next
+    if (c != '/') return UriParseErrType::Malformed;
+  }
+
+  std::getline(strm, uri.authority, '/');
+  if (!uri.authority.size()) return UriParseErrType::Malformed;
+
+  std::getline(strm, uri.path, '\0');
+  if (!uri.path.size()) uri.path = "/";
+
+  return UriParseErrType::Success;
+}
+
+
 /**
  * \brief Copies characters from one file descriptor to another until CRCL
  * \param fdSrc source file descriptor
@@ -355,16 +419,37 @@ int main(int argc, char *argv[]) {
     //}
 
     std::cout << "\nTrace - client connected.." << std::endl;
+    std::cout << "------------------------------------------------------------" << std::endl;
 
+    std::cout << "\nTrace - header info:" << std::endl;
     std::vector<std::string> header = getHeaderLines(clientFd);
     for (size_t i = 0; i < header.size(); ++i)
-    {
       std::cout << "header[" << i << "]: " << header[i] << std::endl;
-    }
 
+    std::cout << "\nTrace - request info:" << std::endl;
+    if (header.size() == 0) {
+      std::cout << "Error: invalid request.." << std::endl;
+    } else {
+      RequestElements req = parseFirstLine(header[0]);
+      std::cout << "type:     " << req.type << std::endl;
+      std::cout << "url:      " << req.url << std::endl;
+      std::cout << "protocol: " << req.protocol << std::endl;
+
+      std::cout << "\nTrace - uri elements:" << std::endl;
+      UriElements uri;
+      UriParseErrType parseResult = parseUri(req.url, uri);
+      if (parseResult == UriParseErrType::Success) {
+        std::cout << "scheme: " << uri.scheme << std::endl;
+        std::cout << "auth:   " << uri.authority << std::endl;
+        std::cout << "path:   " << uri.path << std::endl;
+      } else {
+        std::cout << "PARSING URI ERROR: " << parseResult << std::endl;
+      }
+    }
     //if (copyLines(clientFd, STDOUT_FILENO) != 0) {
     //  errorExit("copying socket to stdout");
     //}
+    std::cout << "------------------------------------------------------------" << std::endl;
     std::cout << "\nTrace - found CRLN, client done." << std::endl;
 
     close(clientFd); // parent does not need the client fd

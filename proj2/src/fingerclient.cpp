@@ -133,7 +133,7 @@ private:
  * \param fdDst destination file descriptor
  * \return 0 on success, errno otherwise
  */
-int copyUntilEOF(const int fdSrc, const int fdDst) {
+int copyUntilCrLn(const int fdSrc, const int fdDst) {
   char c;
   while (true) {
     switch (read(fdSrc, &c, 1)) {
@@ -163,7 +163,7 @@ int main(const int argc, const char *argv[]) {
 
   write(conn.fd(), userArgs.username.c_str(), userArgs.username.size() + 1);
 
-  if (copyUntilEOF(conn.fd(), STDOUT_FILENO) != 0) {
+  if (copyUntilCrLn(conn.fd(), STDOUT_FILENO) != 0) {
     errorExit("copying socket to stdout");
   }
 
