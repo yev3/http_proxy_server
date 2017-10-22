@@ -1,3 +1,7 @@
+# object files
+*.o
+
+
 # VIM swap files
 *.swp
 *.stackdump

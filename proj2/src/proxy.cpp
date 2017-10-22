@@ -7,6 +7,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <iostream>
+#include "helpers.h"
 #include <unistd.h>
 #include <netdb.h>
 #include <signal.h>
@@ -14,31 +15,9 @@
 #include <sys/wait.h>
 #include <cstring>
 #include <vector>
+#include "HttpRequest.h"
+#include <assert.h>
 
-/**
- * \brief exits the program displaying proper usage
- */
-void exitUsage() {
-  std::cout << "usage: proxy port" << std::endl;
-  exit(-1);
-}
-
-/**
- * \brief Exits the program, displaying the error string
- * \param msg message to display
- */
-void errorExit(const char *msg) {
-  perror(msg);
-  exit(errno);
-}
-
-/**
- * \brief Displays an errno string and message
- * \param msg Message to display to user
- */
-void errorLog(const char *msg) {
-  std::cerr << msg << ": " << strerror(errno) << std::endl;
-}
 
 /**
  * \brief reaps the zombie children
@@ -63,118 +42,6 @@ void setupGrimReaper() {
     errorExit("sigaction");
   }
 }
-
-
-/**
- * \brief Helper for resolving addresses for the server
- */
-class ServerAddrInfo {
-public:
-  /**
-   * \brief constructs a linked list of addrinfo structures
-   * \param port port number to listen to
-   */
-  ServerAddrInfo(const int port) {
-    addrinfo hints = { 0 };
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
-    hints.ai_canonname = nullptr;
-    hints.ai_addr = nullptr;
-    hints.ai_next = nullptr;
-    if (0 != getaddrinfo(nullptr,
-      std::to_string(port).c_str(),
-      &hints,
-      &head)) {
-      errorExit("getaddrinfo");
-    }
-    nextVal = head;
-  }
-
-  /**
-   * \brief Frees up memory of addrinfo structures
-   */
-  ~ServerAddrInfo() {
-    freeaddrinfo(head);
-  }
-
-  /**
-   * \brief returns the next addrinfo structure or nullptr if none
-   * \return next addrinfo structure in the linked list or nullptr if none
-   */
-  addrinfo* next() {
-    addrinfo *curr = nextVal;
-    if (nextVal != nullptr)
-      nextVal = nextVal->ai_next;
-    return curr;
-  }
-
-private:
-  addrinfo *head = nullptr;     ///< head of the linked list
-  addrinfo *nextVal = nullptr;  ///< current node
-};
-
-/**
- * \brief Helper for creating a listening socket for the server
- */
-class ServerConnection {
-public:
-  /**
-   * \brief creates a helper for binding sockets
-   * \param port port number to bind the socket to
-   */
-  ServerConnection(const int port) {
-    ServerAddrInfo resolvedAddr{ port };
-    int optVal = 1;
-    addrinfo *cur;
-
-    while ((cur = resolvedAddr.next()) != nullptr) {
-      listenFd = socket(cur->ai_family, cur->ai_socktype,
-        cur->ai_protocol);
-      if (listenFd != -1) {
-
-        if (setsockopt(listenFd, SOL_SOCKET, SO_REUSEADDR, &optVal,
-          sizeof optVal) == -1) {
-          errorExit("setsockopt");
-        }
-
-        if (bind(listenFd, cur->ai_addr, cur->ai_addrlen) != -1) {
-          return;
-        }
-        close(listenFd);
-        listenFd = -1;
-      }
-    }
-  }
-
-  /**
-   * \brief closes any active listening sockets
-   */
-  ~ServerConnection() {
-    if (listenFd != -1) {
-      close(listenFd);
-    }
-  }
-
-  /**
-   * \brief returns the listening socket or -1 if not bound
-   * \return listening socket file descriptor or -1 if not bound
-   */
-  int fd() const {
-    return listenFd;
-  }
-
-  /**
-   * \brief returns true if socket is bound
-   * \return true if the socket is bound and ready to accept connections
-   */
-  bool isConnected() const {
-    return listenFd != -1;
-  }
-
-private:
-  int listenFd = -1; ///< socket file descriptor
-};
 
 /**
  * \brief reads a line
@@ -219,14 +86,14 @@ int readLine(const int fd, char* buf, int size)
  * \param fdDst destination file descriptor
  * \return 0 on success, errno otherwise
  */
-int copyLines(const int fdSrc, const int fdDst) {
+int copyLinesUntilCRLN(const int fdSrc, const int fdDst) {
   static const int bufSize = 256;
   static char buf[256];
   bool lastLineFull = false;
   static char nl = '\n';
   while (true) {
     int lineSize = readLine(fdSrc, buf, bufSize);
-    if (lineSize >= 0) {
+    if (lineSize > 0) {
       write(fdDst, buf, lineSize);
       write(fdDst, &nl, 1);
     } else {
@@ -240,10 +107,30 @@ int copyLines(const int fdSrc, const int fdDst) {
   }
 }
 
-bool isBlankNewline(const char* buf, int size)
-{
-  return size == 1 && buf[0] == '\r';
 
+int sendString(int fd, const std::string& str)
+{
+  int numLeft = str.size();
+  int numSent = 0;
+  const char* buf = str.c_str();
+  while (numLeft > 0) 
+  {
+    int written = write (fd, buf, numLeft); 
+    if (written == -1) {
+      if (errno != EINTR) return -1; // return an error unless interrupted
+    }
+    buf += written;
+    numLeft -= written;
+    numSent += written;
+  } 
+  ///* We should have written no more than COUNT bytes!   */ 
+  assert(numSent == str.size()); 
+  ///* The number of bytes written is exactly COUNT.  */ 
+  return numSent; 
+}
+
+bool isBlankNewline(const char* buf, int size) {
+  return size == 1 && buf[0] == '\r';
 }
 
 /**
@@ -251,106 +138,56 @@ bool isBlankNewline(const char* buf, int size)
  * \param fd socket file descriptor
  * \return header lines
  */
-std::vector<std::string> getHeaderLines(const int fd)
+HttpRequest getHttpRequest(const int fd)
 {
-  std::vector<std::string> lines;
-  std::stringstream line;
   static const int bufSize = 256;
   static char buf[bufSize];
 
-  while (true) {
-    int lineSize = readLine(fd, buf, bufSize);
-    if (lineSize < 0) break;    // error occurred
-    if (isBlankNewline(buf, lineSize)) break;  // blank newline
-    lines.emplace_back(buf, lineSize);
+  // read the request line (first line)
+  int lineSize = readLine(fd, buf, bufSize);
+  if (lineSize < 0) {
+    errorLog("request line read");
+    return HttpRequest{};
   }
-  return lines;
-}
 
-struct RequestElements
-{
-  std::string type;
-  std::string url;
-  std::string protocol;
-};
+  HttpRequest req{ buf, bufSize };
 
-RequestElements parseFirstLine(std::string& line)
-{
-  std::stringstream strm{ line };
-  RequestElements req;
-  strm >> req.type;
-  strm >> req.url;
-  strm >> req.protocol;
+  while (true) {
+    lineSize = readLine(fd, buf, bufSize);
+    if (lineSize < 0) {
+      errorLog("header read from socket");
+      return HttpRequest{};
+    }
+    if (isBlankNewline(buf, lineSize)) break;  // blank newline
+    req.appendHeader(std::string(buf, lineSize));
+  }
   return req;
 }
 
-enum class UriParseErrType
-{
-  Success, NotHttp, Malformed
-};
-
-std::ostream& operator<<(std::ostream& strm, UriParseErrType& err)
-{
-  switch (err) {
-  case UriParseErrType::Success: return strm << "Success";
-  case UriParseErrType::NotHttp: return strm << "NotHttp";
-  case UriParseErrType::Malformed: return strm << "Malformed";
-  default: return strm << "???";
-  }
-}
 
 
-struct UriElements
-{
-  std::string scheme;
-  std::string authority;
-  std::string path;
-};
-
-UriParseErrType parseUri(std::string& absolutePath, UriElements& uri)
-{
-  std::stringstream strm{ absolutePath };
-
-  std::getline(strm, uri.scheme, ':');
-  if (uri.scheme != "http") return UriParseErrType::NotHttp;
-
-  for (int i = 0; i < 2; ++i) {
-    char c;
-    strm >> c;
-    // do not continue if '//' is not next
-    if (c != '/') return UriParseErrType::Malformed;
-  }
-
-  std::getline(strm, uri.authority, '/');
-  if (!uri.authority.size()) return UriParseErrType::Malformed;
-
-  std::getline(strm, uri.path, '\0');
-  if (!uri.path.size()) uri.path = "/";
-
-  return UriParseErrType::Success;
-}
 
 
-/**
- * \brief Copies characters from one file descriptor to another until CRCL
- * \param fdSrc source file descriptor
- * \param fdDst destination file descriptor
- * \return 0 on success, errno otherwise
- */
-int copyUntilCrLn(const int fdSrc, const int fdDst) {
-  char c;
-  while (true) {
-    switch (read(fdSrc, &c, 1)) {
-    case -1:
-      if (errno != EINTR) return -1; // return an error unless interrupted
-      break;
-    case 0:
-      return 0; // EOF
-    default:
-      write(fdDst, &c, 1);
-    }
-  }
-}
+///**
+// * \brief Copies characters from one file descriptor to another until CRCL
+// * \param fdSrc source file descriptor
+// * \param fdDst destination file descriptor
+// * \return 0 on success, errno otherwise
+// */
+//int copyUntilCrLn(const int fdSrc, const int fdDst) {
+//  char c;
+//  while (true) {
+//    switch (read(fdSrc, &c, 1)) {
+//    case -1:
+//      if (errno != EINTR) return -1; // return an error unless interrupted
+//      break;
+//    case 0:
+//      return 0; // EOF
+//    default:
+//      write(fdDst, &c, 1);
+//    }
+//  }
+//}
 
 /**
  * \brief processes a client connection
@@ -371,6 +208,32 @@ void handleClient(const int clientFd) {
   dup2(clientFd, STDERR_FILENO);
   execlp("finger", "finger", userName.c_str(), 0);
   errorExit("execlp"); // should not get here
+}
+
+
+HttpRequest getPage(HttpRequest& userRequest)
+{
+  std::cout << "Trace - Opening connection to: " << userRequest.uri.authority << std::endl;
+
+  std::cout << "Trace - Requesting page, sending headers:" << std::endl;
+  std::string req = userRequest.getPageRequest();
+  std::cout << req << std::flush;
+  ClientConnection conn{ userRequest.uri.authority, 80 };
+  if (conn.isConnected()) {
+    std::cout << "Trace - sending the headers.." << std::endl;
+    sendString(conn.fd(), req);
+    std::cout << "Trace - headers sent, waiting for response.." << std::endl;
+    std::cout << "Trace - Got a response!" << std::endl;
+    std::cout << "--- HEADERS:" << std::endl;
+    copyLinesUntilCRLN(conn.fd(), STDOUT_FILENO);
+    std::cout << "--- CONTENT:" << std::endl;
+    copyLinesUntilCRLN(conn.fd(), STDOUT_FILENO);
+  } else {
+    // TODO: send a 500 response instead
+    errorLog("can't connect to host");
+  }
+
+  return HttpRequest();
 }
 
 int main(int argc, char *argv[]) {
@@ -422,31 +285,28 @@ int main(int argc, char *argv[]) {
     std::cout << "------------------------------------------------------------" << std::endl;
 
     std::cout << "\nTrace - header info:" << std::endl;
-    std::vector<std::string> header = getHeaderLines(clientFd);
-    for (size_t i = 0; i < header.size(); ++i)
-      std::cout << "header[" << i << "]: " << header[i] << std::endl;
+    HttpRequest usrRequest = getHttpRequest(clientFd);
+    std::vector<Header> headers = usrRequest.headers;
+    for (uint i = 0; i < headers.size(); ++i)
+      std::cout << "header[" << i << "] " << headers[i] << std::endl;
 
     std::cout << "\nTrace - request info:" << std::endl;
-    if (header.size() == 0) {
-      std::cout << "Error: invalid request.." << std::endl;
-    } else {
-      RequestElements req = parseFirstLine(header[0]);
-      std::cout << "type:     " << req.type << std::endl;
-      std::cout << "url:      " << req.url << std::endl;
-      std::cout << "protocol: " << req.protocol << std::endl;
+    if (usrRequest.isValid()) {
+      std::cout << "type:     " << usrRequest.requestLine.type << std::endl;
+      std::cout << "url:      " << usrRequest.requestLine.absUrl << std::endl;
+      std::cout << "protocol: " << usrRequest.requestLine.protocol << std::endl;
+      std::cout <<  std::endl;
+      std::cout << "scheme: " << usrRequest.uri.scheme << std::endl;
+      std::cout << "auth:   " << usrRequest.uri.authority << std::endl;
+      std::cout << "path:   " << usrRequest.uri.path << std::endl;
 
-      std::cout << "\nTrace - uri elements:" << std::endl;
-      UriElements uri;
-      UriParseErrType parseResult = parseUri(req.url, uri);
-      if (parseResult == UriParseErrType::Success) {
-        std::cout << "scheme: " << uri.scheme << std::endl;
-        std::cout << "auth:   " << uri.authority << std::endl;
-        std::cout << "path:   " << uri.path << std::endl;
-      } else {
-        std::cout << "PARSING URI ERROR: " << parseResult << std::endl;
-      }
+      HttpRequest pageResponse = getPage(usrRequest);
+
+      std::cout << "\nTrace - found CRLN, client done." << std::endl;
+    } else {
+      std::cout << "Error: invalid request: " << usrRequest.getErrorText() << std::endl;
     }
-    //if (copyLines(clientFd, STDOUT_FILENO) != 0) {
+    //if (copyLinesUntilCRLN(clientFd, STDOUT_FILENO) != 0) {
     //  errorExit("copying socket to stdout");
     //}
     std::cout << "------------------------------------------------------------" << std::endl;

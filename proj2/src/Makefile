@@ -8,20 +8,19 @@
 ###############################################################################
 
 EXECUTABLES=proxy
-SOURCES:= proxy.cpp
+SOURCES:= HttpRequest.cpp helpers.cpp proxy.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 CFLAGS=-g -Wall -std=c++11
 
 .PHONY: all
 all: proxy
 
-proxy: proxy.cpp
-	g++ $(CFLAGS) $< -o $@
-
+proxy: $(OBJECTS)
+	g++ $(CFLAGS) $(OBJECTS) -o $@
 
 # .INTERMEDIATE: %.o
 %.o : %.cpp
-	g++ $(CFLAGS) $< -o $@
+	g++ -c $(CFLAGS) $< -o $@
 
 clean: 
 	rm -f proxy $(OBJECTS)

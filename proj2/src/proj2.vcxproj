@@ -82,8 +82,9 @@
     </RemoteBuildOutputs>
   </PropertyGroup>
   <ItemGroup>
-    <ClCompile Include="fingerclient.cpp" />
-    <ClCompile Include="fingerserver.cpp" />
+    <ClCompile Include="helpers.cpp" />
+    <ClCompile Include="HttpRequest.cpp" />
+    <ClCompile Include="proxy.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Makefile">
@@ -92,7 +93,8 @@
     </Resource>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="fingerclient.h" />
+    <ClInclude Include="helpers.h" />
+    <ClInclude Include="HttpRequest.h" />
   </ItemGroup>
   <ItemDefinitionGroup />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
