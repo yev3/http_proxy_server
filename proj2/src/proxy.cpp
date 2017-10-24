@@ -16,6 +16,7 @@
 #include <cstring>
 #include <vector>
 #include "HttpRequest.h"
+#include "HttpResponse.h"
 #include <assert.h>
 
 
@@ -105,6 +106,27 @@ int copyLinesUntilCRLN(const int fdSrc, const int fdDst) {
     }
     lastLineFull = lineSize == 255;
   }
+}
+
+int copyLinesUntilCRLN2(const int fdSrc, std::string& line) {
+	static const int bufSize = 256;
+	static char buf[256];
+	bool lastLineFull = false;
+	static char nl = '\n';
+	while (true) {
+		int lineSize = readLine(fdSrc, buf, bufSize);
+		if (lineSize > 0) {
+			line += buf;
+		}
+		else {
+			return lineSize;  // error occurred
+		}
+		if (!lastLineFull)
+		{
+			if (lineSize == 1 && buf[0] == '\r') return 0;
+		}
+		lastLineFull = lineSize == 255;
+	}
 }
 
 
@@ -211,7 +233,7 @@ void handleClient(const int clientFd) {
 }
 
 
-HttpRequest getPage(HttpRequest& userRequest)
+HttpRequest getPage(HttpRequest& userRequest, int browserfd)
 {
   std::cout << "Trace - Opening connection to: " << userRequest.uri.authority << std::endl;
 
@@ -224,13 +246,23 @@ HttpRequest getPage(HttpRequest& userRequest)
     sendString(conn.fd(), req);
     std::cout << "Trace - headers sent, waiting for response.." << std::endl;
     std::cout << "Trace - Got a response!" << std::endl;
+	HttpResponse httpResponse{};
     std::cout << "--- HEADERS:" << std::endl;
-    copyLinesUntilCRLN(conn.fd(), STDOUT_FILENO);
+	std::string response;
+    copyLinesUntilCRLN2(conn.fd(), response);
+	httpResponse.appendReponse(response);
     std::cout << "--- CONTENT:" << std::endl;
-    copyLinesUntilCRLN(conn.fd(), STDOUT_FILENO);
+	copyLinesUntilCRLN2(conn.fd(), response);
+	httpResponse.appendReponse(response);
+	response = httpResponse.getResponse();
+	std::cout << "Trace - Sending data back to client" << std::endl;
+	sendString(browserfd, response);
+	std::cout << "Trace - Done sending data back to client" << std::endl;
   } else {
     // TODO: send a 500 response instead
     errorLog("can't connect to host");
+	HttpResponse httpResponse{ responseStatusType::InternalServerError };
+	std::string response = httpResponse.getResponse();
   }
 
   return HttpRequest();
@@ -300,11 +332,13 @@ int main(int argc, char *argv[]) {
       std::cout << "auth:   " << usrRequest.uri.authority << std::endl;
       std::cout << "path:   " << usrRequest.uri.path << std::endl;
 
-      HttpRequest pageResponse = getPage(usrRequest);
+      HttpRequest pageResponse = getPage(usrRequest, clientFd);
 
       std::cout << "\nTrace - found CRLN, client done." << std::endl;
     } else {
       std::cout << "Error: invalid request: " << usrRequest.getErrorText() << std::endl;
+	  HttpResponse httpResponse{ responseStatusType::InternalServerError };
+	  std::string response = httpResponse.getResponse();
     }
     //if (copyLinesUntilCRLN(clientFd, STDOUT_FILENO) != 0) {
     //  errorExit("copying socket to stdout");

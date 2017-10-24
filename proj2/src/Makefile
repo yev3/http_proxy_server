@@ -8,7 +8,7 @@
 ###############################################################################
 
 EXECUTABLES=proxy
-SOURCES:= HttpRequest.cpp helpers.cpp proxy.cpp
+SOURCES:= HttpResponse.cpp HttpRequest.cpp helpers.cpp proxy.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 CFLAGS=-g -Wall -std=c++11
 
