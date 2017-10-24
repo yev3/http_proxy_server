@@ -11,12 +11,14 @@ std::ostream& operator<<(std::ostream& strm, const Header& header)
 
 HttpRequest::HttpRequest(std::string& firstLine)
 {
+  parseStatus = UriParseErrType::Success;
   parseFirstLine(firstLine);
   parseUri();
 }
 
 HttpRequest::HttpRequest(const char* buf, size_t n)
 {
+  parseStatus = UriParseErrType::Success;
   const std::string line{ buf, n };
   parseFirstLine(line);
   parseUri();
@@ -127,6 +129,10 @@ void HttpRequest::parseFirstLine(const std::string& line)
   strm >> requestLine.type;
   strm >> requestLine.absUrl;
   strm >> requestLine.protocol;
+
+  if ((requestLine.type != "GET") || (requestLine.absUrl.find("www.") == std::string::npos)) {
+	  parseStatus = UriParseErrType::Malformed;
+  }
 }
 
 void HttpRequest::parseUri()
@@ -157,8 +163,6 @@ void HttpRequest::parseUri()
 
   std::getline(strm, uri.path, '\0');
   uri.path.insert(0, "/");
-
-  parseStatus = UriParseErrType::Success;
 }
 
 
