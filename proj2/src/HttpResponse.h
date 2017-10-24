@@ -1,7 +1,5 @@
 #pragma once
 #include <string>
-#include <sstream>
-#include <vector>
 
 enum class responseStatusType { Ok, NotFound, BadRequest, InternalServerError };
 
@@ -9,35 +7,44 @@ class HttpResponse
 {
 
 public:
-	/**
-	* \brief ctor from the request line
-	* \param requestLine request line (first line)
-	*/
-	explicit HttpResponse(const responseStatusType& status);
-
 	HttpResponse();
 	~HttpResponse();
 
 	/**
-	* \brief Checks to make sure the header field is valid, replaces any
-	* headers such as connection, saves the header for later reproduction
-	* when sending request to the server
-	* \param line plain text user's request to proxy
-	* \return true if valid
+	* \brief Adds header of response
+	* \param plain text of server's response header
 	*/
-	void appendReponse(std::string line);
-
-	void createResponse();
+	void addHeader(std::string headerString);
 
 	/**
-	* \brief returns the request with all fields rewritten
-	* \return string representing the entire request to send
+	* \brief Adds content of response
+	* \param plain text of server's response content
+	*/
+	void addContent(std::string contentString);
+
+	/**
+	* \brief creates response given status to be sent to client
+	* \param status type
+	*/
+	void createCustomResponse(const responseStatusType& status);
+
+	/**
+	* \brief Creates response using the header and content
+	* \from the server
+	*/
+	void createResponseFromServer();
+
+	/**
+	* \brief returns the response created
+	* \return string representing the entire response to send
 	*/
 	std::string getResponse();
 
 private:
 	std::string code;
 	std::string status;
+	std::string header;
+	std::string content;
 	std::string response;
 };
 

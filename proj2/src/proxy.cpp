@@ -108,15 +108,20 @@ int copyLinesUntilCRLN(const int fdSrc, const int fdDst) {
   }
 }
 
-int copyLinesUntilCRLN2(const int fdSrc, std::string& line) {
+/**
+* \brief Copies LINES from one file descriptor to a string until CRCL
+* \param fdSrc source file descriptor
+* \param copyString is the string that it copies into
+* \return 0 on success, errno otherwise
+*/
+int copyLinesToString(const int fdSrc, std::string& copyString) {
 	static const int bufSize = 256;
 	static char buf[256];
 	bool lastLineFull = false;
-	static char nl = '\n';
 	while (true) {
 		int lineSize = readLine(fdSrc, buf, bufSize);
 		if (lineSize > 0) {
-			line += buf;
+			copyString += buf;
 		}
 		else {
 			return lineSize;  // error occurred
@@ -146,7 +151,7 @@ int sendString(int fd, const std::string& str)
     numSent += written;
   } 
   ///* We should have written no more than COUNT bytes!   */ 
-  assert(numSent == str.size()); 
+  assert(numSent == (int)str.size()); 
   ///* The number of bytes written is exactly COUNT.  */ 
   return numSent; 
 }
@@ -233,7 +238,7 @@ void handleClient(const int clientFd) {
 }
 
 
-HttpRequest getPage(HttpRequest& userRequest, int browserfd)
+HttpResponse getPage(HttpRequest& userRequest, int browserfd)
 {
   std::cout << "Trace - Opening connection to: " << userRequest.uri.authority << std::endl;
 
@@ -241,31 +246,24 @@ HttpRequest getPage(HttpRequest& userRequest, int browserfd)
   std::string req = userRequest.getPageRequest();
   std::cout << req << std::flush;
   ClientConnection conn{ userRequest.uri.authority, 80 };
+  HttpResponse httpResponse{};
   if (conn.isConnected()) {
     std::cout << "Trace - sending the headers.." << std::endl;
     sendString(conn.fd(), req);
     std::cout << "Trace - headers sent, waiting for response.." << std::endl;
     std::cout << "Trace - Got a response!" << std::endl;
-	HttpResponse httpResponse{};
     std::cout << "--- HEADERS:" << std::endl;
-	std::string response;
-    copyLinesUntilCRLN2(conn.fd(), response);
-	httpResponse.appendReponse(response);
+    copyLinesUntilCRLN(conn.fd(), STDOUT_FILENO);
     std::cout << "--- CONTENT:" << std::endl;
-	copyLinesUntilCRLN2(conn.fd(), response);
-	httpResponse.appendReponse(response);
-	response = httpResponse.getResponse();
-	std::cout << "Trace - Sending data back to client" << std::endl;
-	sendString(browserfd, response);
-	std::cout << "Trace - Done sending data back to client" << std::endl;
+	std::string content = "";
+	copyLinesUntilCRLN(conn.fd(), STDOUT_FILENO);;
   } else {
     // TODO: send a 500 response instead
     errorLog("can't connect to host");
-	HttpResponse httpResponse{ responseStatusType::InternalServerError };
-	std::string response = httpResponse.getResponse();
+	httpResponse.createCustomResponse(responseStatusType::InternalServerError);
   }
 
-  return HttpRequest();
+  return httpResponse;
 }
 
 int main(int argc, char *argv[]) {
@@ -332,13 +330,21 @@ int main(int argc, char *argv[]) {
       std::cout << "auth:   " << usrRequest.uri.authority << std::endl;
       std::cout << "path:   " << usrRequest.uri.path << std::endl;
 
-      HttpRequest pageResponse = getPage(usrRequest, clientFd);
+	  HttpResponse pageResponse = getPage(usrRequest, clientFd);
 
       std::cout << "\nTrace - found CRLN, client done." << std::endl;
+
+	  //TODO: uncomment code for phase 2
+	  //std::cout << "Trace - Sending data back to client" << std::endl;
+	  //sendString(clientFd, pageResponse.getResponse());
+	  //std::cout << "Trace - Done sending data back to client" << std::endl;
     } else {
       std::cout << "Error: invalid request: " << usrRequest.getErrorText() << std::endl;
-	  HttpResponse httpResponse{ responseStatusType::InternalServerError };
-	  std::string response = httpResponse.getResponse();
+	  HttpResponse httpResponse{};
+	  httpResponse.createCustomResponse(responseStatusType::InternalServerError);
+	  std::cout << "\nTrace - Sending: " << httpResponse.getResponse() << std::endl;
+	  sendString(clientFd, httpResponse.getResponse());
+	  std::cout << "\nTrace - Done sending response back to client." << std::endl;
     }
     //if (copyLinesUntilCRLN(clientFd, STDOUT_FILENO) != 0) {
     //  errorExit("copying socket to stdout");

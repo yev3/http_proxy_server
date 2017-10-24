@@ -1,9 +1,26 @@
 #include "HttpResponse.h"
 #include <string>
-#include <iostream>
 
-HttpResponse::HttpResponse(const responseStatusType& type)
+HttpResponse::HttpResponse()
 {
+	response = "";
+}
+
+HttpResponse::~HttpResponse()
+{
+}
+
+void HttpResponse::addHeader(std::string headerString)
+{
+	header += headerString;
+}
+
+void HttpResponse::addContent(std::string ContentString)
+{
+	content = ContentString;
+}
+
+void HttpResponse::createCustomResponse(const responseStatusType& type) {
 	switch (type) {
 	case responseStatusType::Ok:
 		code = "200";
@@ -22,33 +39,16 @@ HttpResponse::HttpResponse(const responseStatusType& type)
 		status = "Internal Server Error";
 		break;
 	}
-	response = "";
-}
-
-HttpResponse::HttpResponse()
-{
-	response = "";
-}
-
-HttpResponse::~HttpResponse()
-{
-}
-
-void HttpResponse::createResponse() {
 	response = "HTTP/1.0 " + code + " " + status + "\r\n";
 }
 
-void HttpResponse::appendReponse(std::string data)
+void HttpResponse::createResponseFromServer()
 {
-	response += data;
+	response = header + "\r\n" + content;
 }
-
 
 std::string HttpResponse::getResponse()
 {
-	if (response == "") {
-		createResponse();
-	}
 	return response;
 }
 
