@@ -238,7 +238,7 @@ void handleClient(const int clientFd) {
 }
 
 
-HttpResponse getPage(HttpRequest& userRequest, int browserfd)
+HttpResponse getPage(HttpRequest& userRequest)
 {
   std::cout << "Trace - Opening connection to: " << userRequest.uri.authority << std::endl;
 
@@ -330,7 +330,7 @@ int main(int argc, char *argv[]) {
       std::cout << "auth:   " << usrRequest.uri.authority << std::endl;
       std::cout << "path:   " << usrRequest.uri.path << std::endl;
 
-	  HttpResponse pageResponse = getPage(usrRequest, clientFd);
+	  HttpResponse pageResponse = getPage(usrRequest);
 
       std::cout << "\nTrace - found CRLN, client done." << std::endl;
 

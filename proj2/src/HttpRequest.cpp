@@ -72,13 +72,23 @@ bool HttpRequest::appendHeader(std::string&& line)
   std::cout << "Trace - raw line:" << line << std::endl;
   Header header;
   std::stringstream strm{ line };
+
+  // First check if line contains ": " making it
+  // a valid header
+  if (line.find(": ") == std::string::npos) {
+	  parseStatus = UriParseErrType::Malformed;
+	  return false;
+  }
+
   std::getline(strm, header.name, ':');
 
   if (strm.peek() == ' ') {
     strm.ignore();
   }
   std::getline(strm, header.value, '\r');
-
+  //if (strm.peek() != '\n') {
+	  std::cout << strm.peek() << std::endl;
+  //}
 
   if (!headerIsFiltered(header)) {
     adjustHeaderIfNeeded(header);
