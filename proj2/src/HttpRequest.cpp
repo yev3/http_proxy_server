@@ -11,12 +11,14 @@ std::ostream& operator<<(std::ostream& strm, const Header& header)
 
 HttpRequest::HttpRequest(std::string& firstLine)
 {
+  parseStatus = UriParseErrType::Success;
   parseFirstLine(firstLine);
   parseUri();
 }
 
 HttpRequest::HttpRequest(const char* buf, size_t n)
 {
+  parseStatus = UriParseErrType::Success;
   const std::string line{ buf, n };
   parseFirstLine(line);
   parseUri();
@@ -70,13 +72,23 @@ bool HttpRequest::appendHeader(std::string&& line)
   std::cout << "Trace - raw line:" << line << std::endl;
   Header header;
   std::stringstream strm{ line };
+
+  // First check if line contains ": " making it
+  // a valid header
+  if (line.find(": ") == std::string::npos) {
+	  parseStatus = UriParseErrType::Malformed;
+	  return false;
+  }
+
   std::getline(strm, header.name, ':');
 
   if (strm.peek() == ' ') {
     strm.ignore();
   }
   std::getline(strm, header.value, '\r');
-
+  //if (strm.peek() != '\n') {
+	  std::cout << strm.peek() << std::endl;
+  //}
 
   if (!headerIsFiltered(header)) {
     adjustHeaderIfNeeded(header);
@@ -127,6 +139,10 @@ void HttpRequest::parseFirstLine(const std::string& line)
   strm >> requestLine.type;
   strm >> requestLine.absUrl;
   strm >> requestLine.protocol;
+
+  if ((requestLine.type != "GET") || (requestLine.absUrl.find("www.") == std::string::npos)) {
+	  parseStatus = UriParseErrType::Malformed;
+  }
 }
 
 void HttpRequest::parseUri()
@@ -157,8 +173,6 @@ void HttpRequest::parseUri()
 
   std::getline(strm, uri.path, '\0');
   uri.path.insert(0, "/");
-
-  parseStatus = UriParseErrType::Success;
 }
 
 
