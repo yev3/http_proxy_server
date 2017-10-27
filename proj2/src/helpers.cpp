@@ -39,7 +39,7 @@ ClientAddrInfo::ClientAddrInfo(const std::string& hostname, const int port)
                        &head))
   {
     // TODO: do not exit program
-    errorExit("getaddrinfo");
+    //errorExit("getaddrinfo");
   }
   nextVal = head;
 }
