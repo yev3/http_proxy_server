@@ -348,7 +348,6 @@ int main(int argc, char *argv[]) {
 	if (httpResponse.getResponse() != "") {
 		sendString(clientFd, httpResponse.getResponse());
 	}
-		sendString(clientFd, httpResponse.getResponse());
 
     std::cout << "------------------------------------------------------------" << std::endl;
     std::cout << "\nTrace - found CRLN, client done." << std::endl;
