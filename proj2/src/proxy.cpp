@@ -238,7 +238,7 @@ void handleClient(const int clientFd) {
 }
 
 
-HttpResponse getPage(HttpRequest& userRequest)
+bool getPage(HttpRequest& userRequest, HttpResponse& httpResonse)
 {
   std::cout << "Trace - Opening connection to: " << userRequest.uri.authority << std::endl;
 
@@ -246,7 +246,6 @@ HttpResponse getPage(HttpRequest& userRequest)
   std::string req = userRequest.getPageRequest();
   std::cout << req << std::flush;
   ClientConnection conn{ userRequest.uri.authority, 80 };
-  HttpResponse httpResponse{};
   if (conn.isConnected()) {
     std::cout << "Trace - sending the headers.." << std::endl;
     sendString(conn.fd(), req);
@@ -258,12 +257,11 @@ HttpResponse getPage(HttpRequest& userRequest)
 	std::string content = "";
 	copyLinesUntilCRLN(conn.fd(), STDOUT_FILENO);;
   } else {
-    // TODO: send a 500 response instead
-    errorLog("can't connect to host");
-	httpResponse.createCustomResponse(responseStatusType::InternalServerError);
+	  errorLog("can't connect to host");
+	  return false;
   }
 
-  return httpResponse;
+  return true;
 }
 
 int main(int argc, char *argv[]) {
@@ -321,6 +319,7 @@ int main(int argc, char *argv[]) {
       std::cout << "header[" << i << "] " << headers[i] << std::endl;
 
     std::cout << "\nTrace - request info:" << std::endl;
+	HttpResponse httpResponse{};
     if (usrRequest.isValid()) {
       std::cout << "type:     " << usrRequest.requestLine.type << std::endl;
       std::cout << "url:      " << usrRequest.requestLine.absUrl << std::endl;
@@ -330,25 +329,26 @@ int main(int argc, char *argv[]) {
       std::cout << "auth:   " << usrRequest.uri.authority << std::endl;
       std::cout << "path:   " << usrRequest.uri.path << std::endl;
 
-	  HttpResponse pageResponse = getPage(usrRequest);
+	  if (!getPage(usrRequest, httpResponse)) {
+		  std::cout << "Error: Cannot connect to host: " << usrRequest.uri.authority << std::endl;
+		  httpResponse.createCustomResponse(responseStatusType::InternalServerError);
+	  }
 
       std::cout << "\nTrace - found CRLN, client done." << std::endl;
-
-	  //TODO: uncomment code for phase 2
-	  //std::cout << "Trace - Sending data back to client" << std::endl;
-	  //sendString(clientFd, pageResponse.getResponse());
-	  //std::cout << "Trace - Done sending data back to client" << std::endl;
     } else {
       std::cout << "Error: invalid request: " << usrRequest.getErrorText() << std::endl;
-	  HttpResponse httpResponse{};
 	  httpResponse.createCustomResponse(responseStatusType::InternalServerError);
-	  std::cout << "\nTrace - Sending: " << httpResponse.getResponse() << std::endl;
-	  sendString(clientFd, httpResponse.getResponse());
-	  std::cout << "\nTrace - Done sending response back to client." << std::endl;
     }
     //if (copyLinesUntilCRLN(clientFd, STDOUT_FILENO) != 0) {
     //  errorExit("copying socket to stdout");
     //}
+
+
+	//TODO: Won't need this check is phase 2
+	if (httpResponse.getResponse() != "") {
+		sendString(clientFd, httpResponse.getResponse());
+	}
+
     std::cout << "------------------------------------------------------------" << std::endl;
     std::cout << "\nTrace - found CRLN, client done." << std::endl;
 
