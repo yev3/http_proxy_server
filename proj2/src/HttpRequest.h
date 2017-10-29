@@ -67,6 +67,7 @@ public:
   struct {
     std::string scheme;     ///< such as 'http', 'https', 'fpt', etc..
     std::string authority;  ///< such as 'www.cnn.com', 'google.com', etc..
+	std::string port;		///< such as '80'
     std::string path;       ///< such as '/index.html', etc..
   } uri;
 

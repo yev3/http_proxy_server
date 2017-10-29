@@ -327,6 +327,7 @@ int main(int argc, char *argv[]) {
       std::cout <<  std::endl;
       std::cout << "scheme: " << usrRequest.uri.scheme << std::endl;
       std::cout << "auth:   " << usrRequest.uri.authority << std::endl;
+      std::cout << "port:   " << usrRequest.uri.port << std::endl;
       std::cout << "path:   " << usrRequest.uri.path << std::endl;
 
 	  if (!getPage(usrRequest, httpResponse)) {

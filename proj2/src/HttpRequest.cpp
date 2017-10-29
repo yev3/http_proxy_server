@@ -171,6 +171,15 @@ void HttpRequest::parseUri()
     return;
   }
 
+  // check for port within authority and extract it from uri
+  int port_pos = uri.authority.find(':');
+  if (port_pos > 0) {
+    uri.port = uri.authority.substr(port_pos + 1);
+  // otherwise, default to port 80
+  } else {
+    uri.port = "80";
+  }
+
   std::getline(strm, uri.path, '\0');
   uri.path.insert(0, "/");
 }
