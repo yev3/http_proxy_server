@@ -44,106 +44,36 @@ int copyUntilEOF(const int fdSrc, const int fdDst) {
 
 
 /**
- * \brief reads a line
- * \param fd file descriptor to read from
- * \param buf buffer to store
- * \param size buffer size
- * \return number of chars actually read
- */
-int readLine(const int fd, char *buf, int size) {
-  int numRead = 0; ///< how many were read
-  char c;
-  for (;;) {
-    int r = read(fd, &c, 1);
-    if (r == -1) {
-      if (errno != EINTR) return -1; // return an error unless interrupted
-    } else if (r == 0) {
-      break;
-    } else {
-      if ('\n' == c) break;
-      *buf++ = c;
-      ++numRead;
-    }
-    // when used up the entire buffer
-    if (numRead == (size - 1)) break;
-  }
-
-  if (0 != numRead) {
-    *buf = '\0';
-  }
-
-  return numRead;
-}
-
-/**
  * \brief Copies LINES from one file descriptor to another until CRCL
  * \param fdSrc source file descriptor
  * \param fdDst destination file descriptor
  * \return 0 on success, errno otherwise
  */
 int copyLinesUntilCRLN(const int fdSrc, const int fdDst) {
-  static const int bufSize = 256;
-  static char buf[256];
-  bool lastLineFull = false;
-  static char nl = '\n';
-  while (true) {
-    int lineSize = readLine(fdSrc, buf, bufSize);
-    if (lineSize > 0) {
-      write(fdDst, buf, lineSize);
-      write(fdDst, &nl, 1);
+  static char nl = '\n';        ///< Newline char buffer
+  std::stringstream strm;       ///< Stream used to read and write
+  bool readBlankLine = false;   ///< When true, last line read was blank
+
+  while (!readBlankLine) {
+    // Clear the buffer and read from the source
+    strm.str(std::string());
+    int readNum = readLineIntoStrm(fdSrc, strm);
+
+    readBlankLine = readNum == 0 || 
+                   (readNum == 1 && strm.str() == "\r");
+
+    // Copy the received line to the destination
+    if (readNum > 0) {
+      writeStrm(fdDst, strm, readNum);
+      writeBuffer(fdDst, &nl, 1);
     } else {
-      return lineSize; // error occurred
+      return readNum;     // Error or EOF occurred
     }
-    if (!lastLineFull) {
-      if (lineSize == 1 && buf[0] == '\r') return 0;
-    }
-    lastLineFull = lineSize == 255;
   }
+  return 0;     // Successfully copied until a blank line
 }
 
-/**
-* \brief Copies LINES from one file descriptor to a string until CRCL
-* \param fdSrc source file descriptor
-* \param copyString is the string that it copies into
-* \return 0 on success, errno otherwise
-*/
-int copyLinesToString(const int fdSrc, std::string &copyString) {
-  static const int bufSize = 256;
-  static char buf[256];
-  bool lastLineFull = false;
-  while (true) {
-    int lineSize = readLine(fdSrc, buf, bufSize);
-    if (lineSize > 0) {
-      copyString += buf;
-    } else {
-      return lineSize; // error occurred
-    }
-    if (!lastLineFull) {
-      if (lineSize == 1 && buf[0] == '\r') return 0;
-    }
-    lastLineFull = lineSize == 255;
-  }
-}
-
-int sendString(int fd, const std::string &str) {
-  int numLeft = str.size();
-  int numSent = 0;
-  const char *buf = str.c_str();
-  while (numLeft > 0) {
-    int written = write(fd, buf, numLeft);
-    if (written == -1) {
-      if (errno != EINTR) return -1; // return an error unless interrupted
-    }
-    buf += written;
-    numLeft -= written;
-    numSent += written;
-  }
-  ///* We should have written no more than COUNT bytes!   */ 
-  assert(numSent == (int)str.size());
-  ///* The number of bytes written is exactly COUNT.  */ 
-  return numSent;
-}
-
+////////////////////////////////////////////////////////////////////////////////
 
 bool getPage(HttpRequest &userRequest, HttpResponse &httpResonse) {
   LOG_TRACE("Opening connection to: %s on port %d", 
@@ -155,7 +85,7 @@ bool getPage(HttpRequest &userRequest, HttpResponse &httpResonse) {
     const std::string requestStr = userRequest.getPageRequest();
 
     LOG_TRACE("Sending headers to host:\n%s", requestStr.c_str());
-    sendString(conn.fd(), requestStr);
+    writeString(conn.fd(), requestStr);
     LOG_TRACE("Headers sent.");
     LOG_TRACE("Response Headers:");
     copyLinesUntilCRLN(conn.fd(), STDOUT_FILENO);
@@ -239,7 +169,7 @@ int main(int argc, char *argv[]) {
 
     //TODO: Won't need this check is phase 2
     if (httpResponse.getResponse() != "") {
-      sendString(clientFd, httpResponse.getResponse());
+      writeString(clientFd, httpResponse.getResponse());
     }
 
     LOG_TRACE("-------------------- Done with connection --------------------");

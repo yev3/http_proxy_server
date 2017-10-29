@@ -35,7 +35,7 @@ optimized: CFLAGS+=-O3
 
 .INTERMEDIATE: debug
 debug: proxy
-debug: CFLAGS += -g3 -D_DEBUG
+debug: CFLAGS += -g -D_DEBUG
 
 # Header file dependencies
 AddrInfo.o: AddrInfo.h

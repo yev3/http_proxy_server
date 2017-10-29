@@ -108,7 +108,7 @@ std::string HttpRequest::getPageRequest()
 HttpRequest HttpRequest::createFrom(const int clientFd) {
   std::stringstream strm;
 
-  int lineSize = readLine(clientFd, strm);
+  int lineSize = readLineIntoStrm(clientFd, strm);
   if (lineSize <= 0) {
     LOG_ERROR("line read or socket close");
     return HttpRequest{HttpRequestStatus::HeaderError};
@@ -142,7 +142,7 @@ HttpRequest HttpRequest::createFrom(const int clientFd) {
   bool lastLineNonblank = true;
   while (lastLineNonblank) {
     strm.str(std::string());  // clear the buffer
-    lineSize = readLine(clientFd, strm);
+    lineSize = readLineIntoStrm(clientFd, strm);
     if (lineSize <= 0) {
       LOG_ERROR("header read from socket");
       result.parseStatus = HttpRequestStatus::HeaderError;

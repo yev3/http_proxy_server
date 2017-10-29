@@ -55,4 +55,34 @@ void errorExit(const char* msg);
  * \param inStrm buffer to store
  * \return number of chars actually read
  */
-int readLine(const int fd, std::stringstream &inStrm);
+ssize_t readLineIntoStrm(const int fd, std::stringstream &inStrm);
+
+/**
+ * \brief 
+ * \param fd file descriptor to write stream to
+ * \param strm stream object data to write to fd
+ * \param size number of characters from stream to write
+ * \return 
+ */
+ssize_t writeStrm(const int fd, std::iostream &strm, int size);
+
+
+/**
+ * \brief writes all bytes in buffer to file descriptor. Implementation 
+ * borrowed from: http://man7.org/tlpi/code/online/dist/sockets/rdwrn.c.html
+ * \param fd file descriptor
+ * \param buffer buffer to write
+ * \param n buffer size
+ * \return number of bytes written from the buffer on success
+ */
+ssize_t writeBuffer(const int fd, const void *buffer, const size_t bufSize);
+
+/**
+ * \brief Writes the contents of the string to the file descriptor
+ * \param fd file descriptor
+ * \param str string to write
+ * \return the size of the string on success
+ */
+ssize_t writeString(int fd, const std::string& str);
+
+////////////////////////////////////////////////////////////////////////////////
