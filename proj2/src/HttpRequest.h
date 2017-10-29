@@ -67,11 +67,12 @@ public:
   struct {
     std::string scheme;     ///< such as 'http', 'https', 'fpt', etc..
     std::string authority;  ///< such as 'www.cnn.com', 'google.com', etc..
+    unsigned short int port;///< such as '80'
     std::string path;       ///< such as '/index.html', etc..
   } uri;
 
 private:
-  enum class UriParseErrType { Success, NotHttp, Malformed };
+  enum class UriParseErrType { Success, NotHttp, Malformed, BadPort };
   UriParseErrType parseStatus;
   bool hasHeaderConnection = false;
   bool hasHeaderHost = false;

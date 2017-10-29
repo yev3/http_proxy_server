@@ -42,10 +42,11 @@ std::string HttpRequest::getErrorText()
 {
   switch (parseStatus)
   {
-  case UriParseErrType::Success: return "Success";
-  case UriParseErrType::NotHttp: return "NotHttp";
-  case UriParseErrType::Malformed: return "Malformed";
-  default: return "???";
+    case UriParseErrType::Success: return "Success";
+    case UriParseErrType::NotHttp: return "Not http";
+    case UriParseErrType::Malformed: return "Malformed";
+    case UriParseErrType::BadPort: return "Invalid Port number";
+    default: return "???";
   }
 }
 
@@ -169,6 +170,20 @@ void HttpRequest::parseUri()
   if (!uri.authority.size()) {
     parseStatus = UriParseErrType::Malformed;
     return;
+  }
+
+  // check for port within authority and extract it from uri
+  int portPos = uri.authority.find(':');
+  if (portPos > 0) {
+    std::string strPort = uri.authority.substr(portPos + 1);
+    if (0 <= atoi(strPort.c_str()) && 65535 >= atoi(strPort.c_str())) {
+      uri.port = atoi(strPort.c_str());
+    } else {
+      parseStatus = UriParseErrType::BadPort;
+    }
+  // otherwise, default to port 80
+  } else {
+    uri.port = 80;
   }
 
   std::getline(strm, uri.path, '\0');
