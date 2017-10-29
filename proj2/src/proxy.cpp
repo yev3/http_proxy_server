@@ -245,7 +245,7 @@ bool getPage(HttpRequest& userRequest, HttpResponse& httpResonse)
   std::cout << "Trace - Requesting page, sending headers:" << std::endl;
   std::string req = userRequest.getPageRequest();
   std::cout << req << std::flush;
-  ClientConnection conn{ userRequest.uri.authority, 80 };
+  ClientConnection conn{ userRequest.uri.authority, userRequest.uri.port };
   if (conn.isConnected()) {
     std::cout << "Trace - sending the headers.." << std::endl;
     sendString(conn.fd(), req);
