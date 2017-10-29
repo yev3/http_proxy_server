@@ -1,0 +1,54 @@
+NAME
+    proxy implementation of Project 2, Milestone 1
+
+SYNOPSIS
+     proxy port
+
+DESCRIPTION
+    proxy accepts the port number to bind to and listen for http connections.
+    It sends the username to the fingerserver running on the specified hostname and port, and displays the information
+    received back from the server.
+
+    proxy is designed to run in the background and accept incoming connections.
+
+LIBRARIES USED
+    This project uses a header library downloaded from https://github.com/Microsoft/GSL
+    The Guideline Support Library (GSL) contains functions and types that are suggested for 
+    use by the C++ Core Guidelines maintained by the Standard C++ Foundation. 
+
+DETAILED DESCRIPTION
+    uses the specified port to listen to
+
+    receives http headers
+
+    First line is the request line in format ZYX as listed in the RFC-ABC
+
+    Only supports the "GET" request type
+
+    Parses the given URL into sections as described on page 6 of RFC-3986
+      - scheme
+      - authority
+      - remaining relative path
+
+    Checks that the scheme specified is "http"
+        Responds to user with http 500 status - unsupported scheme
+
+    Authority is further parsed per RFC-2986 page 18:
+    authority = [ userinfo "@" ] host [ ":" port ]
+
+    Any encountered userinfo sections are discarded as they are part of the request headers
+
+    port is also extracted if present, otherwise set to default value of 80
+
+    https://github.com/dmcrodrigues/macro-logger
+
+FILES
+     proxy.cpp          Main entry point of the program
+     fingerclient.cpp   Source file for the fingerclient program
+     Makefile           GNU Make build file
+     README             This readme file
+
+COMPILING
+    The following commands are run in the source directory:
+    make                Compiles the proxy server
+    make clean          Removes the executable file and any object files from a failed compilation

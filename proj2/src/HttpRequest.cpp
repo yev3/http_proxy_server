@@ -1,30 +1,40 @@
 #include "HttpRequest.h"
-#include <string>
-#include <iostream>
 
+const char *getHttpRequestStatusStr(const HttpRequestStatus status) {
+  switch (status) {
+  case HttpRequestStatus::Success: 
+    return "Success";
+  case HttpRequestStatus::NotGetRequest: 
+    return "Request is not of type 'GET'";
+  case HttpRequestStatus::NotHttp: 
+    return "Request is not http://";
+  case HttpRequestStatus::UriParseError: 
+    return "Request URL is invalid.";
+  case HttpRequestStatus::HeaderError:
+    return "Error while parsing headers of request.";
+  default: 
+    return "Unknown request status code";
+  }
+}
 
-std::ostream& operator<<(std::ostream& strm, const Header& header)
-{
+std::ostream& operator<<(std::ostream& strm, const Header& header) {
   strm << header.name << ": " << header.value;
   return strm;
 }
 
-HttpRequest::HttpRequest(std::string& firstLine)
-{
-  parseFirstLine(firstLine);
-  parseUri();
+HttpRequest::HttpRequest(HttpRequestStatus status) {
+  parseStatus = status;
 }
 
-HttpRequest::HttpRequest(const char* buf, size_t n)
-{
-  const std::string line{ buf, n };
-  parseFirstLine(line);
-  parseUri();
-}
+HttpRequest::HttpRequest(std::string &&type_, std::string &&protocol_,
+                         HttpUri &&uri_) 
+  : type(type_), protocol(protocol_), url(uri_) {
+  parseStatus = HttpRequestStatus::Success;
 
-HttpRequest::HttpRequest()
-{
-  parseStatus = UriParseErrType::Malformed;
+  // Adding the two required headers here and omitting any of these
+  // when or if encountered later
+  headers.emplace_back(Header{ std::string("Host"), url.getHost() });
+  headers.emplace_back(Header{ std::string("Connection"), std::string("close") });
 }
 
 HttpRequest::~HttpRequest()
@@ -33,18 +43,11 @@ HttpRequest::~HttpRequest()
 
 bool HttpRequest::isValid() const
 {
-  return parseStatus == UriParseErrType::Success;
+  return parseStatus == HttpRequestStatus::Success;
 }
 
-std::string HttpRequest::getErrorText()
-{
-  switch (parseStatus)
-  {
-  case UriParseErrType::Success: return "Success";
-  case UriParseErrType::NotHttp: return "NotHttp";
-  case UriParseErrType::Malformed: return "Malformed";
-  default: return "???";
-  }
+const char * HttpRequest::getStatus() const {
+  return getHttpRequestStatusStr(parseStatus);
 }
 
 void HttpRequest::adjustHeaderIfNeeded(Header& header)
@@ -67,50 +70,31 @@ bool HttpRequest::appendHeader(std::string&& line)
   // forex: host should be the site name, etc..
   // remove the Proxy-Something-Keep-Alive
 
-  std::cout << "Trace - raw line:" << line << std::endl;
-  Header header;
-  std::stringstream strm{ line };
-  std::getline(strm, header.name, ':');
 
-  if (strm.peek() == ' ') {
-    strm.ignore();
-  }
-  std::getline(strm, header.value, '\r');
-
-
-  if (!headerIsFiltered(header)) {
-    adjustHeaderIfNeeded(header);
-    std::cout << "Trace - adding: (" << header << std::endl;
-    
-    // check to see if it's one of the headers we are tracking for later
-    if (header.name == "Connection") hasHeaderConnection = true;
-    if (header.name == "Host") hasHeaderHost = true;
-
-    headers.emplace_back(header);
-  } else {
-    std::cout << "Trace - header was filtered: " << header << std::endl;
+  // First check if line contains ": " making it
+  // a valid header
+  size_t sepIdx = line.find(": ");
+  if (std::string::npos == sepIdx) {
+	  parseStatus = HttpRequestStatus::HeaderError;
+	  return false;
   }
 
+  std::string name = line.substr(0, sepIdx);
+
+  // These are not considered here since created in the ctor
+  if (name != "Host" &&
+      name != "Connection" &&
+      name != "Proxy-Connection") {
+    headers.emplace_back(Header{ move(name), line.substr(sepIdx + 1) });
+  }
   return true;
 }
 
 
 std::string HttpRequest::getPageRequest()
 {
-  // check to make sure the host and connection headers exist
-  if (!hasHeaderConnection) {
-    hasHeaderConnection = true;
-    std::cout << "Trace - adding connection close header.." << std::endl;
-    headers.emplace_back(Header{ "Connection", "close" });
-  }
-  if (!hasHeaderHost) {
-    hasHeaderHost = true;
-    std::cout << "Trace - adding host header.." << std::endl;
-    headers.emplace_back(Header{ "Host", uri.authority });
-  }
-
   std::stringstream outReq;
-  outReq << requestLine.type << " " << uri.path << " " << "HTTP/1.0" << "\r\n";
+  outReq << type << " " << url.getPath() << " " << "HTTP/1.0" << "\r\n";
   for (const Header& h : headers) {
     outReq << h << "\r\n";
   }
@@ -121,44 +105,66 @@ std::string HttpRequest::getPageRequest()
   return outReq.str();
 }
 
-void HttpRequest::parseFirstLine(const std::string& line)
-{
-  std::stringstream strm{line};
-  strm >> requestLine.type;
-  strm >> requestLine.absUrl;
-  strm >> requestLine.protocol;
-}
+HttpRequest HttpRequest::createFrom(const int clientFd) {
+  std::stringstream strm;
 
-void HttpRequest::parseUri()
-{
-  std::stringstream strm{ requestLine.absUrl };
-
-  std::getline(strm, uri.scheme, ':');
-  if (uri.scheme != "http") {
-    parseStatus = UriParseErrType::NotHttp;
-    return;
+  int lineSize = readLine(clientFd, strm);
+  if (lineSize <= 0) {
+    LOG_ERROR("line read or socket close");
+    return HttpRequest{HttpRequestStatus::HeaderError};
   }
 
-  for (int i = 0; i < 2; ++i) {
-    char c;
-    strm >> c;
-    // do not continue if '//' is not next
-    if (c != '/') {
-      parseStatus = UriParseErrType::Malformed;
-      return;
+  std::string type;
+  std::string absUrl;
+  std::string protocol;
+  strm >> type;
+  strm >> absUrl;
+  strm >> protocol;
+  HttpUri parsedUrl{ move(absUrl) };
+
+  if (type != "GET") {
+    LOG_ERROR("Request is not GET");
+    return HttpRequest{ HttpRequestStatus::NotGetRequest };
+  }
+
+  if (!parsedUrl.isValid()) {
+    LOG_ERROR("Url is not good.");
+    return HttpRequest{ HttpRequestStatus::UriParseError };
+  }
+
+  if (parsedUrl.getScheme() != "http") {
+    LOG_ERROR("Scheme is not http");
+    return HttpRequest{ HttpRequestStatus::NotHttp };
+  }
+
+  HttpRequest result(move(type), move(protocol), std::move(parsedUrl));
+
+  bool lastLineNonblank = true;
+  while (lastLineNonblank) {
+    strm.str(std::string());  // clear the buffer
+    lineSize = readLine(clientFd, strm);
+    if (lineSize <= 0) {
+      LOG_ERROR("header read from socket");
+      result.parseStatus = HttpRequestStatus::HeaderError;
+      return result;
+    }
+
+    std::string line = strm.str();
+    lastLineNonblank = !(line.size() == 1 && line[0] == '\r');
+    
+    if (lastLineNonblank) {
+      line.erase(line.end() - 1);
+      result.appendHeader(move(line));
     }
   }
 
-  std::getline(strm, uri.authority, '/');
-  if (!uri.authority.size()) {
-    parseStatus = UriParseErrType::Malformed;
-    return;
-  }
-
-  std::getline(strm, uri.path, '\0');
-  uri.path.insert(0, "/");
-
-  parseStatus = UriParseErrType::Success;
+  return result;
 }
 
+const char * HttpRequest::getHost() const {
+  return url.getHost().c_str();
+}
 
+int HttpRequest::getPort() const {
+  return url.getPort();
+}

@@ -67,7 +67,7 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <NMakeIncludeSearchPath>C:\Users\YK\Source\linux_headers\include;C:\Users\YK\Source\linux_headers\gcc\include;C:\Users\YK\Source\linux_headers\gcc\include-fixed;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakeIncludeSearchPath>C:\Users\YK\Source\linux_headers\include;C:\Users\YK\Source\linux_headers\gcc\include;C:\Users\YK\Source\linux_headers\gcc\include-fixed;include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
     <BuildCommandLine>
     </BuildCommandLine>
     <CleanCommandLine>
@@ -80,21 +80,64 @@
     </RemoteCleanCommandLine>
     <RemoteBuildOutputs>
     </RemoteBuildOutputs>
+    <NMakePreprocessorDefinitions>size_t=unsigned;__GNUC__;</NMakePreprocessorDefinitions>
   </PropertyGroup>
   <ItemGroup>
-    <ClCompile Include="helpers.cpp" />
-    <ClCompile Include="HttpRequest.cpp" />
-    <ClCompile Include="proxy.cpp" />
+    <ClCompile Include="src\HttpUri.cpp" />
+    <ClCompile Include="src\ClientConnection.cpp" />
+    <ClCompile Include="src/AddrInfo.cpp" />
+    <ClCompile Include="src/helpers.cpp" />
+    <ClCompile Include="src/HttpRequest.cpp" />
+    <ClCompile Include="src/ListenConnection.cpp" />
+    <ClCompile Include="src/proxy.cpp" />
+    <ClCompile Include="src/test.cpp" />
+    <ClCompile Include="src\ByteBuf.cpp" />
+    <ClCompile Include="src\HttpResponse.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Makefile">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    <ClInclude Include="include\HttpUri.h" />
+    <ClInclude Include="include\ClientConnection.h" />
+    <ClInclude Include="include/AddrInfo.h" />
+    <ClInclude Include="include/helpers.h" />
+    <ClInclude Include="include/HttpRequest.h" />
+    <ClInclude Include="include/ListenConnection.h" />
+    <ClInclude Include="include\ByteBuf.h" />
+    <ClInclude Include="include\HttpResponse.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\gsl\gsl">
       <FileType>Document</FileType>
-    </Resource>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="helpers.h" />
-    <ClInclude Include="HttpRequest.h" />
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="include\gsl\gsl_algorithm">
+      <FileType>Document</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="include\gsl\gsl_assert">
+      <FileType>Document</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="include\gsl\gsl_byte">
+      <FileType>Document</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="include\gsl\gsl_util">
+      <FileType>Document</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="include\gsl\multi_span">
+      <FileType>Document</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="include\gsl\span">
+      <FileType>Document</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="include\gsl\string_span">
+      <FileType>Document</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClInclude>
+    <None Include="Makefile" />
   </ItemGroup>
   <ItemDefinitionGroup />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
