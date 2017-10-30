@@ -74,6 +74,43 @@ ssize_t writeString(int fd, const std::string &str) {
   return writeBuffer(fd, str.c_str(), str.size());
 }
 
+int prettyPrintHttpResponse(std::stringstream& strm, int displayLimit) {
+  static constexpr int LINE_WIDTH = 80;   ///< When to force a wrap
+  static const char NL = '\n';            ///< Newline char
+  char buf[LINE_WIDTH];                   ///< Temp buffer to hold cur line
+  int numLinesShown = 0;                  ///< How many lines shown
+  ssize_t bytesRead = 0;                  ///< Total # bytes read
+  bool readBlankLine = false;             ///< When true, marks a section sep
+  std::string line;                       ///< current line
+
+  while (!readBlankLine) {
+    std::getline(strm, line);
+
+    bytesRead = bytesRead + line.size() + 1; // Getline strips \n char
+
+    readBlankLine = line.size() == 0 || (line.size() == 1 && line == "\r");
+
+    if (line.size() > 0) {
+      std::stringstream lineStrm{ line };
+      int readNum;
+      while ((readNum = lineStrm.readsome(buf, LINE_WIDTH)) > 0) {
+        if (++numLinesShown <= displayLimit) {
+          writeBuffer(STDOUT_FILENO, buf, static_cast<const size_t>(readNum));
+          writeBuffer(STDOUT_FILENO, &NL, 1);
+        }
+      }
+    } 
+  }
+
+  if (numLinesShown > displayLimit) {
+    std::cout << "... Omitted " << numLinesShown - displayLimit
+      << " lines for brevity. Content size is " << bytesRead
+      << " bytes." << std::endl;
+  }
+
+  return 0;
+}
+
 int prettyPrintHttpResponse(const int fd, int displayLimit) {
   static constexpr int LINE_WIDTH = 80;   ///< When to force a wrap
   static const char NL = '\n';            ///< Newline char
@@ -113,4 +150,27 @@ int prettyPrintHttpResponse(const int fd, int displayLimit) {
   }
 
   return 0;
+}
+
+std::stringstream receiveSingleResponse(const int fd) {
+  ssize_t bytesRead = 0;                  ///< Total # bytes read
+  int numBlankLinesLeft = 2;              ///< Stop when encounter a snd line
+  std::stringstream strm;                 ///< Stream to read and write from fd
+  std::stringstream line;                 ///< current line
+
+  while (numBlankLinesLeft) {
+    // Clear the line
+    line.str(std::string());
+
+    ssize_t readNum = readLineIntoStrm(fd, line);
+    bytesRead = bytesRead + readNum + 1; // Getline strips \n char
+
+    if(readNum == 0 || (readNum == 1 && line.str() == "\r")) {
+      --numBlankLinesLeft;
+    }
+
+    strm << line.str() << '\n';
+  }
+
+  return strm;
 }

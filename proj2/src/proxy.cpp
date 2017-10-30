@@ -90,11 +90,20 @@ void handleConnectionOn(int clientFd) {
       const std::string requestStr = usrRequest.getRequestStr();
       writeString(conn.fd(), requestStr);
 
-      // Pretty print the response headers
-      prettyPrintHttpResponse(conn.fd());
+      // Receive the response from the server
+      std::stringstream response = receiveSingleResponse(conn.fd());
+      std::string responseStr = response.str();
+
+      // Send it back to the original client
+      writeString(clientFd, responseStr);
+
+      // Pretty print the response headers to the server console
+      prettyPrintHttpResponse(response);
+      //prettyPrintHttpResponse(conn.fd());
 
       // Pretty print the response body, but limit to just 10 lines
-      prettyPrintHttpResponse(conn.fd(), 10);
+      prettyPrintHttpResponse(response, 10);
+      //prettyPrintHttpResponse(conn.fd(), 10);
     } else {
       // Send back 500 with info about connecting 
       std::stringstream connErrMsg{}; 
@@ -110,6 +119,7 @@ void handleConnectionOn(int clientFd) {
 
   // Finished with the client
   close(clientFd); 
+  LOG_TRACE("Client disconnected.");
 }
 
 void handleError(const int fd, const char *errorMsg) {

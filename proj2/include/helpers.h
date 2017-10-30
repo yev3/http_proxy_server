@@ -99,4 +99,7 @@ ssize_t writeString(int fd, const std::string& str);
 int prettyPrintHttpResponse(const int fd,
                             int displayLimit = std::numeric_limits<int>::max());
 
-////////////////////////////////////////////////////////////////////////////////
+int prettyPrintHttpResponse(std::stringstream& strm,
+                            int displayLimit = std::numeric_limits<int>::max());
+
+std::stringstream receiveSingleResponse(const int fd);
