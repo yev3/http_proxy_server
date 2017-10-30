@@ -39,6 +39,14 @@ Yevgeni Kamenski, Zachary Madigan, David Pierce
     Any encountered user info sections are discarded as they are part of the
     request headers, but port is extracted if present, otherwise it is set to
     a default value of 80.
+	
+## STRENGTHS
+	- Code is extensible and modular
+
+## WEAKNESSES
+	- No support for multiple clients
+	- No object caching
+	- Files/objects not sent back to browser
 
 ## FILES
      include/                    Directory with the header files
