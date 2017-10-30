@@ -5,7 +5,7 @@ SYNOPSIS
      proxy port#
 
 DESCRIPTION
-    proxy runs a server on the user-specified port #, and when it recieves
+    proxy listens on the user-specified port, and when it recieves
     an HTTP request from a client, like:
         GET http://www.cnn.com/ HTTP/1.0
         
@@ -13,6 +13,29 @@ DESCRIPTION
     It parses the client's HTTP request and makes a TCP connection to the 
     requested server, and displays the response from the web server. It runs
     continuously until exited using Ctrl + C.
+
+DETAILED DESCRIPTION
+    When proxy receives http headers, it expects the first line to be the
+    request line in format ZYX as listed in the RFC-ABC, and only supports
+    the "GET" request type.
+
+    It parses the given URL into sections as described on page 6 of RFC-3986
+      - scheme
+      - authority
+      - remaining relative path
+
+    Checks that the scheme specified is "http", if that is not used, it
+    responds to the user with "Not http".
+
+    Authority is further parsed per RFC-2986 page 18:
+    authority = [ userinfo "@" ] host [ ":" port ]
+
+    Any encountered user info sections are discarded as they are part of the
+    request headers, but port is extracted if present, otherwise it is set to
+    a default value of 80.
+
+    The proxy also uses logging, provided by this library:
+    https://github.com/dmcrodrigues/macro-logger
 
 FILES
      proxy.cpp              Source file for the proxy program
