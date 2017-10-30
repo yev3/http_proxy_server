@@ -1,8 +1,13 @@
+Project 2 Phase 1
+CPSC 5510 Networking
+Yevgeni Kamenski, Zachary Madigan, David Pierce
+
 NAME
-    proxy - recieves an HTTP request, establishes a TCP connection with the requested web server, and recieves and displays the HTTP response.
+    proxy - recieves an HTTP request, establishes a TCP connection with the requested web
+    server, and recieves and displays the HTTP response.
 
 SYNOPSIS
-     proxy port#
+    proxy port#
 
 DESCRIPTION
     proxy listens on the user-specified port, and when it recieves
@@ -13,6 +18,11 @@ DESCRIPTION
     It parses the client's HTTP request and makes a TCP connection to the 
     requested server, and displays the response from the web server. It runs
     continuously until exited using Ctrl + C.
+
+LIBRARIES USED
+    This project uses a header library downloaded from https://github.com/Microsoft/GSL
+    The Guideline Support Library (GSL) contains functions and types that are suggested for 
+    use by the C++ Core Guidelines maintained by the Standard C++ Foundation. 
 
 DETAILED DESCRIPTION
     When proxy receives http headers, it expects the first line to be the
@@ -25,7 +35,7 @@ DETAILED DESCRIPTION
       - remaining relative path
 
     Checks that the scheme specified is "http", if that is not used, it
-    responds to the user with "Not http".
+    responds to the user with "Request is not http://".
 
     Authority is further parsed per RFC-2986 page 18:
     authority = [ userinfo "@" ] host [ ":" port ]
@@ -39,12 +49,13 @@ DETAILED DESCRIPTION
 
 FILES
      proxy.cpp              Source file for the proxy program
-     helpers.cpp/.h         Source files for helper functions
-     HttpRequest.cpp/.h     Source files for request handling/parsing
-     HttpResponse.cpp/.h    Source files for handling web server response
+     helpers.cpp            Source file for helper functions
+     HttpRequest.cpp        Source file for request handling/parsing
+     HttpResponse.cpp       Source file for handling web server response
      Makefile               GNU Make build file 
      README                 This readme file
 
 COMPILING
+    The following commands are run in the source directory:
     make                Compiles proxy
-    make clean          Removes the executable files
+    make clean          Removes the executable and object files to start fresh
