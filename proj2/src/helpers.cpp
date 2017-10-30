@@ -74,3 +74,45 @@ ssize_t writeBuffer(const int fd, const void *buffer, const size_t bufSize) {
 ssize_t writeString(int fd, const std::string &str) {
   return writeBuffer(fd, str.c_str(), str.size());
 }
+
+int prettyPrintHttpResponse(const int fd, 
+                           int displayLimit = std::numeric_limits<int>::max()) {
+  static constexpr int LINE_WIDTH = 80; ///< When to force a wrap
+  static const char NL = '\n'; ///< Newline char
+  char buf[LINE_WIDTH]; ///< Temp buffer to hold cur line
+  int numLinesShown = 0; ///< How many lines shown
+  ssize_t bytesRead = 0; ///< Total # bytes read
+  bool readBlankLine = false; ///< When true, marks a section sep
+  std::stringstream strm; ///< Stream to read and write from fd
+
+  while (!readBlankLine) {
+    // Clear the buffer, read from the source
+    strm.str(std::string());
+
+    ssize_t readNum = readLineIntoStrm(fd, strm);
+    bytesRead = bytesRead + readNum + 1; // Getline strips \n char
+
+    readBlankLine = readNum == 0 || (readNum == 1 && strm.str() == "\r");
+
+    if (readNum > 0) {
+      while ((readNum = strm.readsome(buf, LINE_WIDTH)) > 0) {
+        if (++numLinesShown <= displayLimit) {
+          writeBuffer(STDOUT_FILENO, buf, static_cast<const size_t>(readNum));
+          writeBuffer(STDOUT_FILENO, &NL, 1);
+        }
+      }
+    } else if (readNum < 0) {
+      return readNum; // error case
+    } else {
+      break; // EOF case
+    }
+  }
+
+  if (numLinesShown > displayLimit) {
+    std::cout << "... Omitted " << numLinesShown - displayLimit
+      << " lines for brevity. Content size is " << bytesRead
+      << " bytes." << std::endl;
+  }
+
+  return 0;
+}

@@ -16,64 +16,8 @@
 #include <vector>
 #include "HttpRequest.h"
 #include "HttpResponse.h"
-#include <assert.h>
 #include "ListenConnection.h"
 #include "ClientConnection.h"
-
-/**
- * \brief Copies characters from one file descriptor to another until EOF
- * \param fdSrc source file descriptor
- * \param fdDst destination file descriptor
- * \return 0 on success, errno otherwise
- */
-int copyUntilEOF(const int fdSrc, const int fdDst) {
-  char c;
-  int numRead;
-  while (true) {
-    numRead = read(fdSrc, &c, 1);
-    if (numRead == -1) {
-      if (EINTR != errno) 
-        return -1;
-    } else if (numRead == 0) {
-      return 0; // EOF case
-    } else {
-      write(fdDst, &c, 1);
-    }
-  }
-}
-
-
-/**
- * \brief Copies LINES from one file descriptor to another until CRCL
- * \param fdSrc source file descriptor
- * \param fdDst destination file descriptor
- * \return 0 on success, errno otherwise
- */
-int copyLinesUntilCRLN(const int fdSrc, const int fdDst) {
-  static char nl = '\n';        ///< Newline char buffer
-  std::stringstream strm;       ///< Stream used to read and write
-  bool readBlankLine = false;   ///< When true, last line read was blank
-
-  while (!readBlankLine) {
-    // Clear the buffer and read from the source
-    strm.str(std::string());
-    int readNum = readLineIntoStrm(fdSrc, strm);
-
-    readBlankLine = readNum == 0 || 
-                   (readNum == 1 && strm.str() == "\r");
-
-    // Copy the received line to the destination
-    if (readNum > 0) {
-      writeStrm(fdDst, strm, readNum);
-      writeBuffer(fdDst, &nl, 1);
-    } else {
-      return readNum;     // Error or EOF occurred
-    }
-  }
-  return 0;     // Successfully copied until a blank line
-}
-
-////////////////////////////////////////////////////////////////////////////////
 
 bool getPage(HttpRequest &userRequest, HttpResponse &httpResonse) {
   LOG_TRACE("Opening connection to: %s on port %d", 
@@ -88,10 +32,10 @@ bool getPage(HttpRequest &userRequest, HttpResponse &httpResonse) {
     writeString(conn.fd(), requestStr);
     LOG_TRACE("Headers sent.");
     LOG_TRACE("Response Headers:");
-    copyLinesUntilCRLN(conn.fd(), STDOUT_FILENO);
+    prettyPrintHttpResponse(conn.fd());
     LOG_TRACE("Copy content to screen until server terminates connection..");
     std::string content = "";
-    copyLinesUntilCRLN(conn.fd(), STDOUT_FILENO);;
+    prettyPrintHttpResponse(conn.fd(), 10);
   } else {
     LOG_ERROR("can't connect to host");
     return false;
@@ -99,7 +43,6 @@ bool getPage(HttpRequest &userRequest, HttpResponse &httpResonse) {
 
   return true;
 }
-
 
 /**
  * \brief Proxy program main entry point.
@@ -123,7 +66,7 @@ int main(int argc, char *argv[]) {
     errorExit("Could not bind a socket");
 
   std::cout << "Listening for clients on port " << portNo
-            << ", use <CTRL>-C to qu,it." << std::endl;
+            << ", use <CTRL>-C to quit." << std::endl;
 
   while (true) {
     const int clientFd = accept(conn.fd(), nullptr, nullptr);

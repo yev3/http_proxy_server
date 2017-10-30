@@ -1,10 +1,12 @@
 #pragma once
 #include <cstdlib>
 #include <cstring>
+#include <iostream>
 #include <cstdio>
 #include <cerrno>
 #include <sstream>
 #include <unistd.h>
+#include <limits>
 
 /*
  * Simple terminal colors
@@ -84,5 +86,17 @@ ssize_t writeBuffer(const int fd, const void *buffer, const size_t bufSize);
  * \return the size of the string on success
  */
 ssize_t writeString(int fd, const std::string& str);
+
+/**
+ * \brief Copies lines from a file descriptor to the STDOUT. Does not allow
+ * the output to exceed 80 chars. Displays all headers. Displays the first
+ * 5 lines and the last 2 lines of the body or entire body, whichever is
+ * smaller.
+ * \param fd source file descriptor
+ * \param displayLimit maximum number of lines to display
+ * \return 0 on success, errno otherwise
+ */
+int prettyPrintHttpResponse(const int fd,
+                            int displayLimit = std::numeric_limits<int>::max());
 
 ////////////////////////////////////////////////////////////////////////////////

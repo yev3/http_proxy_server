@@ -80,7 +80,7 @@
     </RemoteCleanCommandLine>
     <RemoteBuildOutputs>
     </RemoteBuildOutputs>
-    <NMakePreprocessorDefinitions>size_t=unsigned;__GNUC__;_DEBUG;</NMakePreprocessorDefinitions>
+    <NMakePreprocessorDefinitions>size_t=unsigned;__GNUC__;</NMakePreprocessorDefinitions>
   </PropertyGroup>
   <ItemGroup>
     <ClCompile Include="src\HttpUri.cpp" />
