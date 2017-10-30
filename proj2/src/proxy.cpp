@@ -91,7 +91,9 @@ void handleConnectionOn(int clientFd) {
       writeString(conn.fd(), requestStr);
 
       // Receive the response from the server
-      std::stringstream response = receiveSingleResponse(conn.fd());
+      std::stringstream response; 
+      ssize_t bytesRead = receiveSingleResponse(conn.fd(), response);
+      LOG_TRACE("Read bytes: %d", (int)bytesRead);
       std::string responseStr = response.str();
 
       // Send it back to the original client

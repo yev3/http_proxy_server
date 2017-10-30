@@ -102,4 +102,4 @@ int prettyPrintHttpResponse(const int fd,
 int prettyPrintHttpResponse(std::stringstream& strm,
                             int displayLimit = std::numeric_limits<int>::max());
 
-std::stringstream receiveSingleResponse(const int fd);
+ssize_t receiveSingleResponse(const int fd, std::stringstream& strm);

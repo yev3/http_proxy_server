@@ -152,10 +152,9 @@ int prettyPrintHttpResponse(const int fd, int displayLimit) {
   return 0;
 }
 
-std::stringstream receiveSingleResponse(const int fd) {
+ssize_t receiveSingleResponse(const int fd, std::stringstream& strm) {
   ssize_t bytesRead = 0;                  ///< Total # bytes read
   int numBlankLinesLeft = 2;              ///< Stop when encounter a snd line
-  std::stringstream strm;                 ///< Stream to read and write from fd
   std::stringstream line;                 ///< current line
 
   while (numBlankLinesLeft) {
@@ -172,5 +171,5 @@ std::stringstream receiveSingleResponse(const int fd) {
     strm << line.str() << '\n';
   }
 
-  return strm;
+  return bytesRead;
 }
