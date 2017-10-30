@@ -59,18 +59,20 @@ int main(int argc, char *argv[]) {
             << ", use <CTRL>-C to quit." << std::endl;
 
   /*
-   * For Milestone 1, process only 1 connection and quit
+   * For Milestone 1, process only 1 connection at a time
    */
 
-  int clientFd;
-  do {
-    clientFd = accept(conn.fd(), nullptr, nullptr);
-    if (clientFd == -1) {
-      LOG_ERROR("accept");
-    }
-  } while (clientFd < 0);
+  while (true) {
+    int clientFd;
+    do {
+      clientFd = accept(conn.fd(), nullptr, nullptr);
+      if (clientFd == -1) {
+        LOG_ERROR("accept");
+      }
+    } while (clientFd < 0);
 
-  handleConnectionOn(clientFd);
+    handleConnectionOn(clientFd);
+  }
 }
 
 void handleConnectionOn(int clientFd) {
