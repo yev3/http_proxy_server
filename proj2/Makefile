@@ -21,7 +21,7 @@ SOURCES:= HttpRequest.cpp\
           proxy.cpp
           
 OBJECTS=$(SOURCES:.cpp=.o)
-CFLAGS=-Wall -std=c++11
+CFLAGS=-Wall -std=c++1y
 
 .PHONY: all
 all: optimized

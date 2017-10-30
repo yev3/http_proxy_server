@@ -27,21 +27,21 @@
 #define LOG_ARGS(LOG_TYPE) (LOG_TYPE), LOG_FILE, __LINE__, __FUNCTION__
 #define PRINT_FUNCTION(PRINT_FORMAT, ...) fprintf(stderr, (PRINT_FORMAT), __VA_ARGS__)
 
-#define LOG_DEBUG(LOG_MSG, args...) \
-  PRINT_FUNCTION(LOG_FORMAT LOG_MSG "\n", LOG_ARGS("DEBUG"), ## args)
-#define LOG_TRACE(LOG_MSG, args...) \
-  PRINT_FUNCTION(LOG_FORMAT LOG_MSG "\n", LOG_ARGS("TRACE"), ## args)
-#define LOG_ERROR(LOG_MSG, args...) \
-  PRINT_FUNCTION(LOG_FORMAT LOG_MSG ": %s\n", LOG_ARGS("ERROR"), ## args, strerror(errno))
+#define LOG_DEBUG(LOG_MSG, ...) \
+  PRINT_FUNCTION(LOG_FORMAT LOG_MSG "\n", LOG_ARGS("DEBUG"), ## __VA_ARGS__)
+#define LOG_TRACE(LOG_MSG, ...) \
+  PRINT_FUNCTION(LOG_FORMAT LOG_MSG "\n", LOG_ARGS("TRACE"), ## __VA_ARGS__)
+#define LOG_ERROR(LOG_MSG, ...) \
+  PRINT_FUNCTION(LOG_FORMAT LOG_MSG ": %s\n", LOG_ARGS("ERROR"), ## __VA_ARGS__, strerror(errno))
 
 #else 
 /* 
  * Do not log anything when _DEBUG is undefined 
  */
 
-#define LOG_ERROR(message, args...)
-#define LOG_TRACE(message, args...)
-#define LOG_DEBUG(message, args...)
+#define LOG_ERROR(message, ...)
+#define LOG_TRACE(message, ...)
+#define LOG_DEBUG(message, ...)
 
 #endif /* #ifdef _DEBUG */
 
