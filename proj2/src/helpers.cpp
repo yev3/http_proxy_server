@@ -60,14 +60,14 @@ ssize_t writeBuffer(const int fd, const void *buffer, const size_t bufSize) {
     // following ensures that we don't loop forever if it does 
     if (numWritten <= 0) {
       if (numWritten == -1 && errno == EINTR)
-        continue; // Interrupted --> restart write()
+        continue;         // Interrupted --> restart write()
       else
-        return -1; // Some other error
+        return -1;        // Some other error
     }
     totWritten += numWritten;
     buf += numWritten;
   }
-  return totWritten; // Must be 'bufSize' bytes if we get here
+  return totWritten;      // Must be 'bufSize' bytes if we get here
 }
 
 ssize_t writeString(int fd, const std::string &str) {
@@ -75,13 +75,13 @@ ssize_t writeString(int fd, const std::string &str) {
 }
 
 int prettyPrintHttpResponse(const int fd, int displayLimit) {
-  static constexpr int LINE_WIDTH = 80; ///< When to force a wrap
-  static const char NL = '\n'; ///< Newline char
-  char buf[LINE_WIDTH]; ///< Temp buffer to hold cur line
-  int numLinesShown = 0; ///< How many lines shown
-  ssize_t bytesRead = 0; ///< Total # bytes read
-  bool readBlankLine = false; ///< When true, marks a section sep
-  std::stringstream strm; ///< Stream to read and write from fd
+  static constexpr int LINE_WIDTH = 80;   ///< When to force a wrap
+  static const char NL = '\n';            ///< Newline char
+  char buf[LINE_WIDTH];                   ///< Temp buffer to hold cur line
+  int numLinesShown = 0;                  ///< How many lines shown
+  ssize_t bytesRead = 0;                  ///< Total # bytes read
+  bool readBlankLine = false;             ///< When true, marks a section sep
+  std::stringstream strm;                 ///< Stream to read and write from fd
 
   while (!readBlankLine) {
     // Clear the buffer, read from the source
@@ -102,7 +102,7 @@ int prettyPrintHttpResponse(const int fd, int displayLimit) {
     } else if (readNum < 0) {
       return readNum; // error case
     } else {
-      break; // EOF case
+      break;          // EOF case
     }
   }
 
