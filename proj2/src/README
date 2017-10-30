@@ -5,9 +5,10 @@ SYNOPSIS
      proxy port#
 
 DESCRIPTION
-    proxy accepts an HTTP request from a client, like:
+    proxy runs a server on the user-specified port #, and when it recieves
+    an HTTP request from a client, like:
         GET http://www.cnn.com/ HTTP/1.0
-
+        
         
     It parses the client's HTTP request and makes a TCP connection to the 
     requested server, and displays the response from the web server. It runs
