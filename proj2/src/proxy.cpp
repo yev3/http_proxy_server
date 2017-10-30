@@ -99,11 +99,9 @@ void handleConnectionOn(int clientFd) {
 
       // Pretty print the response headers to the server console
       prettyPrintHttpResponse(response);
-      //prettyPrintHttpResponse(conn.fd());
 
       // Pretty print the response body, but limit to just 10 lines
       prettyPrintHttpResponse(response, 10);
-      //prettyPrintHttpResponse(conn.fd(), 10);
     } else {
       // Send back 500 with info about connecting 
       std::stringstream connErrMsg{}; 
