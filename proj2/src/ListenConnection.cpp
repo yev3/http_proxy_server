@@ -1,6 +1,13 @@
+////////////////////////////////////////////////////////////////////////////////
+// Project2, CPSC 5510 Networking, Seattle University
+// Team: Zach Madigan, David Pierce, and Yevgeni Kamenski
+// 
+// ListenConnection.h
+// 
+// This is free and unencumbered software released into the public domain.
+////////////////////////////////////////////////////////////////////////////////
+
 #include "ListenConnection.h"
-#include "helpers.h"
-#include "AddrInfo.h"
 
 ListenConnection::ListenConnection(const int port) {
   AddrInfo resolvedAddr{port};

@@ -1,3 +1,13 @@
+////////////////////////////////////////////////////////////////////////////////
+// Project2, CPSC 5510 Networking, Seattle University
+// Team: Zach Madigan, David Pierce, and Yevgeni Kamenski
+// 
+// AddrInfo.cpp
+// Holds the DNS resolution entries.
+// 
+// This is free and unencumbered software released into the public domain.
+////////////////////////////////////////////////////////////////////////////////
+
 #include "AddrInfo.h"
 
 /**

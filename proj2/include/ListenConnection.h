@@ -1,5 +1,16 @@
+////////////////////////////////////////////////////////////////////////////////
+// Project2, CPSC 5510 Networking, Seattle University
+// Team: Zach Madigan, David Pierce, and Yevgeni Kamenski
+// 
+// ListenConnection.h
+// 
+// This is free and unencumbered software released into the public domain.
+////////////////////////////////////////////////////////////////////////////////
+
 #pragma once
 #include <unistd.h>
+#include "helpers.h"
+#include "AddrInfo.h"
 
 /**
  * \brief Helper for creating a listening socket for the server

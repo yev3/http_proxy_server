@@ -26,7 +26,6 @@ ssize_t readLineIntoStrm(const int fd, std::stringstream &inStrm) {
   return numRead;
 }
 
-
 ssize_t writeStrm(const int fd, std::iostream &strm, int size) {
   int writtenSize;              ///< number of chars written to file descriptor
   for (writtenSize = 0; writtenSize < size; ++writtenSize) {
@@ -75,8 +74,7 @@ ssize_t writeString(int fd, const std::string &str) {
   return writeBuffer(fd, str.c_str(), str.size());
 }
 
-int prettyPrintHttpResponse(const int fd, 
-                           int displayLimit = std::numeric_limits<int>::max()) {
+int prettyPrintHttpResponse(const int fd, int displayLimit) {
   static constexpr int LINE_WIDTH = 80; ///< When to force a wrap
   static const char NL = '\n'; ///< Newline char
   char buf[LINE_WIDTH]; ///< Temp buffer to hold cur line

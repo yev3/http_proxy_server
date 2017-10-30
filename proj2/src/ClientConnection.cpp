@@ -1,3 +1,14 @@
+////////////////////////////////////////////////////////////////////////////////
+// Project2, CPSC 5510 Networking, Seattle University
+// Team: Zach Madigan, David Pierce, and Yevgeni Kamenski
+// 
+// ClientConnection.cpp
+// Client connection class to abstract the system calls. File descriptor is
+// closed on instance destruction.
+// 
+// This is free and unencumbered software released into the public domain.
+////////////////////////////////////////////////////////////////////////////////
+
 #include "ClientConnection.h"
 
 ClientConnection::ClientConnection(const char* hostname, const int port) {

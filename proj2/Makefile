@@ -11,15 +11,15 @@ VPATH = src include
 CPPFLAGS += -I include
 
 EXECUTABLES=proxy
-SOURCES:= HttpResponse.cpp\
-          HttpRequest.cpp\
+SOURCES:= HttpRequest.cpp\
+          HttpResponse.cpp\
           AddrInfo.cpp\
           ListenConnection.cpp\
           ClientConnection.cpp\
           HttpUri.cpp\
           helpers.cpp\
           proxy.cpp
-
+          
 OBJECTS=$(SOURCES:.cpp=.o)
 CFLAGS=-Wall -std=c++11
 

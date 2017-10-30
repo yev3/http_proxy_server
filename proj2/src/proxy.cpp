@@ -1,7 +1,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Project2, CPSC 5510 Networking, Seattle University
+// Team: Zach Madigan, David Pierce, and Yevgeni Kamenski
 // 
 // proxy.cpp
+// Main entry point of the program
 // 
 // This is free and unencumbered software released into the public domain.
 ////////////////////////////////////////////////////////////////////////////////
@@ -19,30 +21,18 @@
 #include "ListenConnection.h"
 #include "ClientConnection.h"
 
-bool getPage(HttpRequest &userRequest, HttpResponse &httpResonse) {
-  LOG_TRACE("Opening connection to: %s on port %d", 
-    userRequest.getHost(), userRequest.getPort());
+/**
+ * \brief Sends the headers and a message for an http 500 error
+ * \param fd Socket file descriptor
+ * \param errorMsg Message to include in the 500 response
+ */
+void handleError(const int fd, const char *errorMsg);
 
-  ClientConnection conn{ userRequest.getHost(), userRequest.getPort() };
-  if (conn.isConnected()) {
-    LOG_TRACE("Connection established.");
-    const std::string requestStr = userRequest.getPageRequest();
-
-    LOG_TRACE("Sending headers to host:\n%s", requestStr.c_str());
-    writeString(conn.fd(), requestStr);
-    LOG_TRACE("Headers sent.");
-    LOG_TRACE("Response Headers:");
-    prettyPrintHttpResponse(conn.fd());
-    LOG_TRACE("Copy content to screen until server terminates connection..");
-    std::string content = "";
-    prettyPrintHttpResponse(conn.fd(), 10);
-  } else {
-    LOG_ERROR("can't connect to host");
-    return false;
-  }
-
-  return true;
-}
+/**
+ * \brief Handles the user's TCP connection
+ * \param clientFd Client socket file descriptor
+ */
+void handleConnectionOn(int clientFd);
 
 /**
  * \brief Proxy program main entry point.
@@ -68,55 +58,65 @@ int main(int argc, char *argv[]) {
   std::cout << "Listening for clients on port " << portNo
             << ", use <CTRL>-C to quit." << std::endl;
 
-  while (true) {
-    const int clientFd = accept(conn.fd(), nullptr, nullptr);
+  /*
+   * For Milestone 1, process only 1 connection and quit
+   */
+
+  int clientFd;
+  do {
+    clientFd = accept(conn.fd(), nullptr, nullptr);
     if (clientFd == -1) {
       LOG_ERROR("accept");
-      continue;
     }
+  } while (clientFd < 0);
 
-    LOG_TRACE("Client connected..");
-    LOG_TRACE("------------------------------------------------------------");
+  handleConnectionOn(clientFd);
+}
 
-    LOG_TRACE("Header info:");
+void handleConnectionOn(int clientFd) {
+  LOG_TRACE("Client connected.");
 
-    HttpRequest usrRequest = HttpRequest::createFrom(clientFd);
-    std::vector<Header> headers = usrRequest.headers;
-    for (uint i = 0; i < headers.size(); ++i)
-      std::cout << "header[" << i << "] " << headers[i] << std::endl;
+  // Read from the client socket and parse the HttpRequest
+  HttpRequest usrRequest = HttpRequest::createFrom(clientFd);
 
-    LOG_TRACE("Request info:");
+  if (usrRequest.isValid()) {
+    // The user sent valid request and headers, make a connection
+    ClientConnection conn{ usrRequest.getHost(), usrRequest.getPort() };
 
-    LOG_TRACE("type:     %s", usrRequest.type.c_str());
-    LOG_TRACE("protocol: %s", usrRequest.protocol.c_str());
-    LOG_TRACE("");
-    LOG_TRACE("scheme: %s", usrRequest.url.getScheme().c_str());
-    LOG_TRACE("host:   %s", usrRequest.url.getHost().c_str());
-    LOG_TRACE("path:   %s", usrRequest.url.getPath().c_str());
-    LOG_TRACE("port:   %d", usrRequest.url.getPort());
-    LOG_TRACE("valid:  %d", usrRequest.url.isValid());
+    if (conn.isConnected()) {
+      // Connection established, send headers to the host
+      const std::string requestStr = usrRequest.getRequestStr();
+      writeString(conn.fd(), requestStr);
 
-    HttpResponse httpResponse{};
-    if (usrRequest.isValid()) {
-      if (getPage(usrRequest, httpResponse)) {
-        LOG_TRACE("Got a valid page from server.");
-      } else {
-        LOG_ERROR("Cannot connect to: %s", usrRequest.url.getHost().c_str());
-        httpResponse.createCustomResponse(responseStatusType::InternalServerError);
-      }
+      // Pretty print the response headers
+      prettyPrintHttpResponse(conn.fd());
+
+      // Pretty print the response body, but limit to just 10 lines
+      prettyPrintHttpResponse(conn.fd(), 10);
     } else {
-      LOG_ERROR("Invalid request: %s", usrRequest.getStatus());
-      httpResponse.createCustomResponse(
-        responseStatusType::InternalServerError);
+      // Send back 500 with info about connecting 
+      std::stringstream connErrMsg{}; 
+      connErrMsg << "Cannot connect to host "
+                 << usrRequest.getHost() << " on port "
+                 << usrRequest.getPort() << ".";
+      handleError(clientFd, connErrMsg.str().c_str());
     }
-
-    //TODO: Won't need this check is phase 2
-    if (httpResponse.getResponse() != "") {
-      writeString(clientFd, httpResponse.getResponse());
-    }
-
-    LOG_TRACE("-------------------- Done with connection --------------------");
-
-    close(clientFd); // parent does not need the client fd
+  } else {
+    // Errors occurred while parsing request, send back 500
+    handleError(clientFd, usrRequest.statusStr());
   }
+
+  // Finished with the client
+  close(clientFd); 
+}
+
+void handleError(const int fd, const char *errorMsg) {
+  // User's request or headers had problems, send back http 500 error
+  HttpResponse response{errorMsg};
+
+  // For MS1, display on console
+  std::cout << response.str() << std::flush;
+
+  // Send the error response to the client
+  writeString(fd, response.str());
 }

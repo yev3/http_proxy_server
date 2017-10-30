@@ -1,6 +1,16 @@
+////////////////////////////////////////////////////////////////////////////////
+// Project2, CPSC 5510 Networking, Seattle University
+// Team: Zach Madigan, David Pierce, and Yevgeni Kamenski
+// 
+// HttpUri.h
+// 
+// This is free and unencumbered software released into the public domain.
+////////////////////////////////////////////////////////////////////////////////
+
 #pragma once
 #include <string>
 #include <sstream>
+#include <iostream>
 
 class HttpUri {
 public:

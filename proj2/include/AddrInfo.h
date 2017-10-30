@@ -1,4 +1,15 @@
+////////////////////////////////////////////////////////////////////////////////
+// Project2, CPSC 5510 Networking, Seattle University
+// Team: Zach Madigan, David Pierce, and Yevgeni Kamenski
+// 
+// AddrInfo.h
+// Holds the DNS resolution entries.
+// 
+// This is free and unencumbered software released into the public domain.
+////////////////////////////////////////////////////////////////////////////////
+
 #pragma once
+
 #include <netdb.h>
 #include <string>
 #include "helpers.h"

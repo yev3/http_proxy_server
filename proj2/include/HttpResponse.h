@@ -1,50 +1,29 @@
+////////////////////////////////////////////////////////////////////////////////
+// Project2, CPSC 5510 Networking, Seattle University
+// Team: Zach Madigan, David Pierce, and Yevgeni Kamenski
+// 
+// HttpResponse.h
+// 
+// This is free and unencumbered software released into the public domain.
+////////////////////////////////////////////////////////////////////////////////
+
 #pragma once
 #include <string>
+#include <sstream>
 
-enum class responseStatusType { Ok, NotFound, BadRequest, InternalServerError };
-
-class HttpResponse
-{
-
+class HttpResponse { 
 public:
+	HttpResponse(const char* msg);
 	HttpResponse();
 	virtual ~HttpResponse();
-
-	/**
-	* \brief Adds header of response
-	* \param plain text of server's response header
-	*/
-	void addHeader(std::string headerString);
-
-	/**
-	* \brief Adds content of response
-	* \param plain text of server's response content
-	*/
-	void addContent(std::string contentString);
-
-	/**
-	* \brief creates response given status to be sent to client
-	* \param status type
-	*/
-	void createCustomResponse(const responseStatusType& status);
-
-	/**
-	* \brief Creates response using the header and content
-	* \from the server
-	*/
-	void createResponseFromServer();
 
 	/**
 	* \brief returns the response created
 	* \return string representing the entire response to send
 	*/
-	std::string getResponse();
+  const std::string &str();
 
 private:
-	std::string code;
-	std::string status;
-	std::string header;
-	std::string content;
 	std::string response;
 };
 

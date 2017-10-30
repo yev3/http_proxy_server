@@ -1,5 +1,13 @@
+////////////////////////////////////////////////////////////////////////////////
+// Project2, CPSC 5510 Networking, Seattle University
+// Team: Zach Madigan, David Pierce, and Yevgeni Kamenski
+// 
+// HttpUri.cpp
+// 
+// This is free and unencumbered software released into the public domain.
+////////////////////////////////////////////////////////////////////////////////
+
 #include "HttpUri.h"
-#include <iostream>
 
 bool findChar(char c, std::string::iterator &it,
               const std::string::iterator &end) {

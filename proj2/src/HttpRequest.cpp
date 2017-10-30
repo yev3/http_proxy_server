@@ -1,3 +1,13 @@
+////////////////////////////////////////////////////////////////////////////////
+// Project2, CPSC 5510 Networking, Seattle University
+// Team: Zach Madigan, David Pierce, and Yevgeni Kamenski
+// 
+// HttpRequest.cpp
+// Parsed proxy HttpRequest.
+// 
+// This is free and unencumbered software released into the public domain.
+////////////////////////////////////////////////////////////////////////////////
+
 #include "HttpRequest.h"
 
 const char *getHttpRequestStatusStr(const HttpRequestStatus status) {
@@ -37,42 +47,18 @@ HttpRequest::HttpRequest(std::string &&type_, std::string &&protocol_,
   headers.emplace_back(Header{ std::string("Connection"), std::string("close") });
 }
 
-HttpRequest::~HttpRequest()
-{
-}
+HttpRequest::~HttpRequest() { }
 
-bool HttpRequest::isValid() const
-{
+bool HttpRequest::isValid() const {
   return parseStatus == HttpRequestStatus::Success;
 }
 
-const char * HttpRequest::getStatus() const {
+const char * HttpRequest::statusStr() const {
   return getHttpRequestStatusStr(parseStatus);
 }
 
-void HttpRequest::adjustHeaderIfNeeded(Header& header)
-{
-  if (header.name == "Connection") {
-    header.value = "close";
-  }
-}
-
-bool HttpRequest::headerIsFiltered(const Header& header)
-{
-  return header.name == "Proxy-Connection";
-}
-
-
-bool HttpRequest::appendHeader(std::string&& line)
-{
-  // TODO: rewrite the header lines as needed
-  // forex: connection should be closed,
-  // forex: host should be the site name, etc..
-  // remove the Proxy-Something-Keep-Alive
-
-
-  // First check if line contains ": " making it
-  // a valid header
+bool HttpRequest::appendHeader(std::string&& line) {
+  // First check if line contains ": " making it a valid header
   size_t sepIdx = line.find(": ");
   if (std::string::npos == sepIdx) {
 	  parseStatus = HttpRequestStatus::HeaderError;
@@ -87,12 +73,11 @@ bool HttpRequest::appendHeader(std::string&& line)
       name != "Proxy-Connection") {
     headers.emplace_back(Header{ move(name), line.substr(sepIdx + 1) });
   }
+
   return true;
 }
 
-
-std::string HttpRequest::getPageRequest()
-{
+std::string HttpRequest::getRequestStr() {
   std::stringstream outReq;
   outReq << type << " " << url.getPath() << " " << "HTTP/1.0" << "\r\n";
   for (const Header& h : headers) {
@@ -143,17 +128,19 @@ HttpRequest HttpRequest::createFrom(const int clientFd) {
   while (lastLineNonblank) {
     strm.str(std::string());  // clear the buffer
     lineSize = readLineIntoStrm(clientFd, strm);
-    if (lineSize <= 0) {
+    if (lineSize < 0) {
       LOG_ERROR("header read from socket");
       result.parseStatus = HttpRequestStatus::HeaderError;
       return result;
     }
 
     std::string line = strm.str();
-    lastLineNonblank = !(line.size() == 1 && line[0] == '\r');
+    lastLineNonblank = !(line.size() == 0 || (line.size() == 1 && line[0] == '\r'));
     
     if (lastLineNonblank) {
-      line.erase(line.end() - 1);
+      if (line.back() == '\r') {
+        line.erase(line.end() - 1);
+      }
       result.appendHeader(move(line));
     }
   }
