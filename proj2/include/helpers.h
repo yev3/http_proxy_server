@@ -52,12 +52,19 @@
 void errorExit(const char* msg);
 
 /**
+ * \brief Exits the program displaying the error string
+ * \param errNo Error number to lookup
+ * \param msg Additional message
+ */
+void errorExit(int errNo, const char* msg);
+
+/**
  * \brief reads a line
  * \param fd file descriptor to read from
  * \param inStrm buffer to store
  * \return number of chars actually read
  */
-ssize_t readLineIntoStrm(const int fd, std::stringstream &inStrm);
+ssize_t readLineIntoStrm(int fd, std::stringstream &inStrm);
 
 /**
  * \brief 
@@ -66,7 +73,7 @@ ssize_t readLineIntoStrm(const int fd, std::stringstream &inStrm);
  * \param size number of characters from stream to write
  * \return 
  */
-ssize_t writeStrm(const int fd, std::iostream &strm, int size);
+ssize_t writeStrm(int fd, std::iostream &strm, int size);
 
 
 /**
@@ -77,7 +84,7 @@ ssize_t writeStrm(const int fd, std::iostream &strm, int size);
  * \param n buffer size
  * \return number of bytes written from the buffer on success
  */
-ssize_t writeBuffer(const int fd, const void *buffer, const size_t bufSize);
+ssize_t writeBuffer(int fd, const void *buffer, size_t bufSize);
 
 /**
  * \brief Writes the contents of the string to the file descriptor
@@ -96,10 +103,12 @@ ssize_t writeString(int fd, const std::string& str);
  * \param displayLimit maximum number of lines to display
  * \return 0 on success, errno otherwise
  */
-int prettyPrintHttpResponse(const int fd,
+int prettyPrintHttpResponse(int fd,
                             int displayLimit = std::numeric_limits<int>::max());
 
 int prettyPrintHttpResponse(std::stringstream& strm,
                             int displayLimit = std::numeric_limits<int>::max());
 
-ssize_t receiveSingleResponse(const int fd, std::stringstream& strm);
+ssize_t receiveResponseHeaders(int fd, std::stringstream &strm);
+
+ssize_t copyUntilEOF(int fdSrc, int fdDst);

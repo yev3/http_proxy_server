@@ -5,6 +5,11 @@ void errorExit(const char* msg) {
   exit(errno);
 }
 
+void errorExit(int errNo, const char* msg) {
+  std::cerr << msg << ": " << strerror(errNo) << std::endl;
+  exit(errno);
+}
+
 ssize_t readLineIntoStrm(const int fd, std::stringstream &inStrm) {
   int numRead = 0; ///< how many were read
   char c;
@@ -152,24 +157,46 @@ int prettyPrintHttpResponse(const int fd, int displayLimit) {
   return 0;
 }
 
-ssize_t receiveSingleResponse(const int fd, std::stringstream& strm) {
+ssize_t receiveResponseHeaders(const int fd, std::stringstream &strm) {
   ssize_t bytesRead = 0;                  ///< Total # bytes read
-  int numBlankLinesLeft = 2;              ///< Stop when encounter a snd line
+  bool isBlankLine = false;               ///< Stop when encounter a snd line
   std::stringstream line;                 ///< current line
 
-  while (numBlankLinesLeft) {
+  while (!isBlankLine) {
     // Clear the line
     line.str(std::string());
 
     ssize_t readNum = readLineIntoStrm(fd, line);
     bytesRead = bytesRead + readNum + 1; // Getline strips \n char
 
-    if(readNum == 0 || (readNum == 1 && line.str() == "\r")) {
-      --numBlankLinesLeft;
-    }
+    isBlankLine = readNum == 0 || (readNum == 1 && line.str() == "\r");
 
     strm << line.str() << '\n';
   }
 
   return bytesRead;
 }
+
+ssize_t copyUntilEOF(int fdSrc, int fdDst) {
+  static constexpr size_t BUF_SIZE = 4096;    ///< Temp buffer size
+  char buf[BUF_SIZE];                         ///< Buffer for reading/writing
+  ssize_t numRead;                            ///< Curr #bytes rcvd from src
+  size_t totRead = 0;                         ///< Tot #bytes forwarded
+
+  for (;;) {
+    numRead = read(fdSrc, buf, BUF_SIZE);
+
+    if (numRead > 0) {                      // Normal case, forward data
+      writeBuffer(fdDst, buf, (const size_t) (numRead));
+      totRead += numRead;
+    } else if (0 == numRead) {              // Reached EOF
+      return totRead;
+    } else if (EINTR == errno) {            // When interrupted, restart
+      continue;
+    } else {                                // Return on all other errors
+      return -1;
+    }
+  }
+}
+
+

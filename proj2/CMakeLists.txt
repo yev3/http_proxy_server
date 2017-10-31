@@ -4,6 +4,8 @@ project(proj2)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_C_STANDARD 11)
 
+add_definitions(-D_DEBUG)
+
 include_directories(
         ./include
         C:/Users/YK/Source/linux_headers
@@ -12,9 +14,22 @@ include_directories(
 
 # TEST: display_task
 set(SOURCE_FILES
-        src/HttpUri.cpp
+        include/AddrInfo.h
+        include/ClientConnection.h
+        include/helpers.h
+        include/HttpRequest.h
+        include/HttpResponse.h
+        include/HttpUri.h
+        include/ListenConnection.h
+
+        src/AddrInfo.cpp
+        src/ClientConnection.cpp
         src/helpers.cpp
-        src/test.cpp
+        src/HttpRequest.cpp
+        src/HttpResponse.cpp
+        src/HttpUri.cpp
+        src/ListenConnection.cpp
+        src/proxy.cpp
 )
 
 add_executable(proj2 ${SOURCE_FILES})
