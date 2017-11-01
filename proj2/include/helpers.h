@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cerrno>
 #include <sstream>
+#include <sys/sendfile.h>
 #include <unistd.h>
 #include <limits>
 
