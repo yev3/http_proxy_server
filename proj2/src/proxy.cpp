@@ -51,6 +51,13 @@ int main(int argc, char *argv[]) {
   (std::stringstream{ argv[1] }) >> portNo;
   ListenConnection conn{ portNo };
 
+  // Ignore SIGPIPE errors
+  struct sigaction sa{};
+  sa.sa_handler = SIG_IGN;
+  sa.sa_flags = 0;
+  if (sigaction(SIGPIPE, &sa, 0) == -1)
+    errorExit("sigaction");
+
   // Program can't continue if unable to listen for connections
   if (!conn.isConnected())
     errorExit("Could not bind a socket");
