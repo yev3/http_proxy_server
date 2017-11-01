@@ -178,24 +178,48 @@ ssize_t receiveResponseHeaders(const int fd, std::stringstream &strm) {
 }
 
 ssize_t copyUntilEOF(int fdSrc, int fdDst) {
-  static constexpr size_t BUF_SIZE = 4096;    ///< Temp buffer size
-  char buf[BUF_SIZE];                         ///< Buffer for reading/writing
-  ssize_t numRead;                            ///< Curr #bytes rcvd from src
-  size_t totRead = 0;                         ///< Tot #bytes forwarded
+  //static constexpr size_t BUF_SIZE = 4096;    ///< Temp buffer size
+  size_t BUF_SIZE = 4096;
+											  //char buf[BUF_SIZE];                         ///< Buffer for reading/writing
+  //ssize_t numRead;                            ///< Curr #bytes rcvd from src
+  //size_t totRead = 0;                         ///< Tot #bytes forwarded
 
-  for (;;) {
-    numRead = read(fdSrc, buf, BUF_SIZE);
+  //for (;;) {
+  //  numRead = read(fdSrc, buf, BUF_SIZE);
 
-    if (numRead > 0) {                      // Normal case, forward data
-      writeBuffer(fdDst, buf, (const size_t) (numRead));
-      totRead += numRead;
-    } else if (0 == numRead) {              // Reached EOF
-      return totRead;
-    } else if (EINTR == errno) {            // When interrupted, restart
-      continue;
-    } else {                                // Return on all other errors
-      return -1;
-    }
+  //  if (numRead > 0) {                      // Normal case, forward data
+  //    writeBuffer(fdDst, buf, (const size_t) (numRead));
+  //    totRead += numRead;
+  //  } else if (0 == numRead) {              // Reached EOF
+  //    return totRead;
+  //  } else if (EINTR == errno) {            // When interrupted, restart
+  //    continue;
+  //  } else {                                // Return on all other errors
+  //    return -1;
+  //  }
+  //}
+  //for (;;) {
+	 // int n = sendfile(fdDst, fdSrc, NULL, BUF_SIZE);
+	 // if (n <= 0) {
+		//  break;
+	 // }
+	 // else if (EINTR == errno) {			  // When interrupted, restart
+		//  continue;
+	 // }
+  //}
+  while (true) {
+	  int n = sendfile(fdDst, fdSrc, NULL, 4096);
+	  if (n == 0) {
+		  std::cout << "GOT 0" << std::endl;
+		  break;
+	  } else if (errno == EINTR || errno == EAGAIN) {
+		  std::cout << "interrupted" << std::endl;
+		  continue;
+	  }
+	  else if (errno == EINVAL) {
+		  std::cout << "Bad argument" << std::endl;
+		  break;
+	  }
   }
 }
 
