@@ -15,17 +15,11 @@
 #include <csignal>
 #include <sstream>
 #include <cstring>
-#include <vector>
-#include <semaphore.h>
+#include <vector>W
 #include "HttpRequest.h"
 #include "HttpResponse.h"
 #include "ListenConnection.h"
 #include "ClientConnection.h"
-
-/**
-* \global sempahore to handle number of client connections
-*/
-sem_t connSem;
 
 /**
  * \brief Sends the headers and a message for an http 500 error
@@ -71,10 +65,6 @@ int main(int argc, char *argv[]) {
   std::cout << "Listening for clients on port " << portNo
             << ", use <CTRL>-C to quit." << std::endl;
 
-  // Initialize semaphore
-  // Only want to handle 32 connections simultaneously
-  sem_init(&connSem, 0, 32);
-
   /*
    * For Milestone 1, process only 1 connection at a time
    */
@@ -84,7 +74,6 @@ int main(int argc, char *argv[]) {
   while (true) {
     int clientFd;
     do {
-	  sem_wait(&connSem); /* Wait until thread available */
       clientFd = accept(conn.fd(), nullptr, nullptr);
       if (clientFd == -1) {
         LOG_ERROR("accept");
@@ -113,7 +102,6 @@ int main(int argc, char *argv[]) {
       errorExit(status, "pthread_attr_destroy");
   }
 
-  sem_destroy(&connSem); /* Semaphore is no longer needed*/
 #pragma clang diagnostic pop
 }
 
@@ -180,7 +168,6 @@ static void * handleConnectionOn(void *fd) {
 
   // Finished with the client
   close(clientFd);
-  sem_post(&connSem); // Free spot for another thread
   pthread_exit(nullptr);
 }
 

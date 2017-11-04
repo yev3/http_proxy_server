@@ -201,5 +201,3 @@ ssize_t copyUntilEOF(int fdSrc, int fdDst) {
 		}
 	}
 }
-
-
