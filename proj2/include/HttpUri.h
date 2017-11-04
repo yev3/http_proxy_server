@@ -19,12 +19,37 @@ public:
 
   virtual ~HttpUri();
 
+  /**
+  * \brief returns whether or not the uri is valid
+  */
   bool isValid() const;
 
+  /**
+  * \brief returns the uri schema
+  */
   const std::string& getScheme() const;
+
+  /**
+  * \brief returns the uri host
+  */
   const std::string& getHost() const;
+
+  /**
+  * \brief returns the uri sport number
+  */
   int getPort() const;
+
+  /**
+  * \brief returns the uri object path
+  */
   const std::string& getPath() const;
+
+  /**
+  * \brief Outputs the uri to a specified stream
+  * \param strm Output stream
+  * \param uri Uri to output to stream
+  * \return reference to the modified stream
+  */
   friend std::ostream& operator<<(std::ostream& strm, const HttpUri& uri);
 
 private:

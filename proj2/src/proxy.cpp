@@ -12,10 +12,10 @@
 #include "helpers.h"
 #include <unistd.h>
 #include <netdb.h>
-#include <signal.h>
+#include <csignal>
 #include <sstream>
 #include <cstring>
-#include <vector>
+#include <vector>W
 #include "HttpRequest.h"
 #include "HttpResponse.h"
 #include "ListenConnection.h"
@@ -26,13 +26,13 @@
  * \param fd Socket file descriptor
  * \param errorMsg Message to include in the 500 response
  */
-void handleError(const int fd, const char *errorMsg);
+void handleError(int fd, const char *errorMsg);
 
 /**
  * \brief Handles the user's TCP connection
  * \param clientFd Client socket file descriptor
  */
-void handleConnectionOn(int clientFd);
+static void * handleConnectionOn(void * fd);
 
 /**
  * \brief Proxy program main entry point.
@@ -51,6 +51,13 @@ int main(int argc, char *argv[]) {
   (std::stringstream{ argv[1] }) >> portNo;
   ListenConnection conn{ portNo };
 
+  // Ignore SIGPIPE errors
+  struct sigaction sa{};
+  sa.sa_handler = SIG_IGN;
+  sa.sa_flags = 0;
+  if (sigaction(SIGPIPE, &sa, 0) == -1)
+    errorExit("sigaction");
+
   // Program can't continue if unable to listen for connections
   if (!conn.isConnected())
     errorExit("Could not bind a socket");
@@ -62,6 +69,8 @@ int main(int argc, char *argv[]) {
    * For Milestone 1, process only 1 connection at a time
    */
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-noreturn"
   while (true) {
     int clientFd;
     do {
@@ -71,12 +80,34 @@ int main(int argc, char *argv[]) {
       }
     } while (clientFd < 0);
 
-    handleConnectionOn(clientFd);
+    pthread_t thr;
+    pthread_attr_t attr{};
+    int status;
+
+    status = pthread_attr_init(&attr);
+    if (status != 0)
+      errorExit(status, "pthread_attr_init");
+
+    status = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    if (status != 0)
+      errorExit(status, "pthread_attr_setdetachstate");
+
+    status = pthread_create(&thr, &attr,
+                            handleConnectionOn, (void *) (intptr_t) clientFd);
+    if (status != 0)
+      errorExit(status, "pthread_create");
+
+    status = pthread_attr_destroy(&attr); /* No longer needed */
+    if (status != 0)
+      errorExit(status, "pthread_attr_destroy");
   }
+
+#pragma clang diagnostic pop
 }
 
-void handleConnectionOn(int clientFd) {
-  LOG_TRACE("Client connected.");
+static void * handleConnectionOn(void *fd) {
+  int clientFd = (int)(size_t)fd;
+  LOG_TRACE("%3d Client connected.", clientFd);
 
   // Read from the client socket and parse the HttpRequest
   HttpRequest usrRequest = HttpRequest::createFrom(clientFd);
@@ -90,23 +121,39 @@ void handleConnectionOn(int clientFd) {
       const std::string requestStr = usrRequest.getRequestStr();
       writeString(conn.fd(), requestStr);
 
+      // TODO - remove, testing
+      {
+        std::stringstream requestStrm{requestStr};
+        std::string requestLine;
+        std::getline(requestStrm, requestLine);
+        LOG_TRACE("%3d Requested: %s", clientFd, requestLine.c_str());
+      }
+
       // Receive the response from the server
       std::stringstream response; 
-      ssize_t bytesRead = receiveSingleResponse(conn.fd(), response);
-      LOG_TRACE("Read bytes: %d", (int)bytesRead);
-      std::string responseStr = response.str();
+      ssize_t bytesRead = receiveResponseHeaders(conn.fd(), response);
 
-      // Send it back to the original client
+      // TODO - remove, testing
+      {
+        LOG_TRACE("%3d Response header size: %d", conn.fd(), (int)bytesRead);
+        std::stringstream responseStrmCpy{response.str()};
+        std::string responseLine;
+        std::getline(responseStrmCpy, responseLine);
+        LOG_TRACE("%3d Response: %s", conn.fd(), responseLine.c_str());
+      }
+
+      // Send headers back to the original client
+      std::string responseStr = response.str();
       writeString(clientFd, responseStr);
 
-      // Pretty print the response headers to the server console
-      prettyPrintHttpResponse(response);
+      // Act like a tunnel until the connection is closed by the site
+      copyUntilEOF(conn.fd(), clientFd);
 
-      // Pretty print the response body, but limit to just 10 lines
-      prettyPrintHttpResponse(response, 10);
+      // prettyPrintHttpResponse(response, 10);
+
     } else {
       // Send back 500 with info about connecting 
-      std::stringstream connErrMsg{}; 
+      std::stringstream connErrMsg;
       connErrMsg << "Cannot connect to host "
                  << usrRequest.getHost() << " on port "
                  << usrRequest.getPort() << ".";
@@ -117,9 +164,11 @@ void handleConnectionOn(int clientFd) {
     handleError(clientFd, usrRequest.statusStr());
   }
 
+  LOG_TRACE("Disconnecting client %d.", clientFd);
+
   // Finished with the client
-  close(clientFd); 
-  LOG_TRACE("Client disconnected.");
+  close(clientFd);
+  pthread_exit(nullptr);
 }
 
 void handleError(const int fd, const char *errorMsg) {

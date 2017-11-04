@@ -19,9 +19,28 @@
 
 class ClientConnection {
 public:
+  /**
+  * \brief creates a helper for connecting sockets
+  * \param hostname host name of server to connect to
+  * \param port port number that the server is listening on
+  */
   explicit ClientConnection(const char* hostname, const int port);
+
+  /**
+   * \brief closes any active connected sockets
+   */
   virtual ~ClientConnection();
+
+  /**
+  * \brief returns the client socket or -1 if not connection to a server
+  * \return client socket file descriptor or -1 if not connected
+  */
   int fd() const;
+
+  /**
+  * \brief returns true if socket is connected to a server
+  * \return true if the socket is connected to a server
+  */
   bool isConnected() const;
 
 private:
