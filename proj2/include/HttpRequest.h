@@ -101,6 +101,10 @@ public:
    */
   int getPort() const;
 
+  /**
+  * \brief returns the status of the http request afer parsing
+  * \return status of either success or explaining any errors
+  */
   const char* statusStr() const;
 
 private:

@@ -24,7 +24,7 @@ public:
   const std::string &str();
 
 private:
-	std::string response;
+	std::string response;	///< http response
 };
 
 
