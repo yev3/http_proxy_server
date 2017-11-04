@@ -15,7 +15,7 @@
 #include <csignal>
 #include <sstream>
 #include <cstring>
-#include <vector>W
+#include <vector>
 #include "HttpRequest.h"
 #include "HttpResponse.h"
 #include "ListenConnection.h"
