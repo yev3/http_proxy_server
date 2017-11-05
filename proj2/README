@@ -1,5 +1,5 @@
 ################################################################################
-Project 2 Phase 1
+Project 2 Phase 2
 CPSC 5510 Networking
 Yevgeni Kamenski, Zachary Madigan, David Pierce
 ################################################################################
@@ -17,7 +17,7 @@ Yevgeni Kamenski, Zachary Madigan, David Pierce
         GET http://www.cnn.com/ HTTP/1.0
 
     It parses the client's HTTP request and makes a TCP connection to the
-    requested server, and displays the response from the web server. It then exits
+    requested server, and returns the response to the client.
 
 ## DETAILED DESCRIPTION
     When proxy receives http headers, it expects the first line to be the
@@ -42,11 +42,12 @@ Yevgeni Kamenski, Zachary Madigan, David Pierce
 	
 ## STRENGTHS
 	- Code is extensible and modular
+	- Support for multiple clients
+	- Partial send of data back to client increases performance (instead of waiting for entire object before send)
 
 ## WEAKNESSES
-	- No support for multiple clients
 	- No object caching
-	- Files/objects not sent back to browser
+	- Creating/Deleting threads for every client connection is expensive
 
 ## FILES
      include/                    Directory with the header files
@@ -67,3 +68,10 @@ Yevgeni Kamenski, Zachary Madigan, David Pierce
     make debug          Compiles the debug version of the proxy, which may print
                         additional diagnostic information to the console.
     make clean          Removes the executable and object files to start fresh
+
+## Contributions
+### Zachary Madigan
+	- Parsing of http request and creation of request to send to server
+	- Researched different strategies to increase performance
+	- Helped implement read/write strategy of sending server's response back to the client
+	- Helped write Readme
