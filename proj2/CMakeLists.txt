@@ -23,6 +23,8 @@ set(SOURCE_FILES
         include/ListenConnection.h
         include/LineScanner.h
         include/HttpHeaderBuilder.h
+        include/ForwardSocketData.h
+        include/ScopeGuard.h
 
         src/AddrInfo.cpp
         src/ClientConnection.cpp
@@ -34,6 +36,7 @@ set(SOURCE_FILES
         src/proxy.cpp
         src/LineScanner.cpp
         src/HttpHeaderBuilder.cpp
-        include/ScopeGuard.h src/ForwardSocketData.cpp src/ForwardSocketData.h)
+        src/ForwardSocketData.cpp
+)
 
 add_executable(proj2 ${SOURCE_FILES})

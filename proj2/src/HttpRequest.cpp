@@ -36,7 +36,7 @@ std::ostream& operator<<(std::ostream& strm, const Header& header) {
   strm << header.name << ": " << header.value;
   return strm;
 }
-]
+
 HttpRequest::HttpRequest(HttpRequestStatus status) {
   parseStatus = status;
 }
