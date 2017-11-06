@@ -16,6 +16,9 @@ SOURCES:= HttpRequest.cpp\
           AddrInfo.cpp\
           ListenConnection.cpp\
           ClientConnection.cpp\
+          LineScanner.cpp\
+          HttpHeaderBuilder.cpp\
+          ForwardSocketData.cpp\
           HttpUri.cpp\
           helpers.cpp\
           proxy.cpp

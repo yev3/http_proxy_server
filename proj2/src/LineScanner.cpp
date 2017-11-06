@@ -17,7 +17,7 @@ LineScanner::LineScanner(int readFd) : readFd_(readFd) {
 ssize_t LineScanner::scanLine() {
   ssize_t scanErr;
   while ((scanErr = tryScanLine()) <= 0) {
-    errno_t scanErrNo = errno;
+    int scanErrNo = errno;
     if (scanErrNo != EINTR && scanErrNo != EAGAIN) {
       LOG_ERROR("Failure trying to read line");
       break;
@@ -55,7 +55,7 @@ ssize_t LineScanner::tryScanLine() {
     // When found newline
     if (newlineLoc != nullptr) {
       // Only partially write the buffer
-      line_.write(curBuf, (ptrdiff_t)(newlineLoc - curBuf));
+      line_.write(curBuf, (ssize_t)(newlineLoc - curBuf));
 
       // Save the rest for later
       leftoverBuf_ = static_cast<char *>(newlineLoc + 1);

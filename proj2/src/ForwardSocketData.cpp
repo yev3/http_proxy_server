@@ -32,7 +32,7 @@ void ForwardSocketData::receiveBuf(bool &bufIsFull,
 
   // Handle errors
   if (numRecv < 0) {
-    errno_t recvErr = errno;
+    int recvErr = errno;
     if (recvErr == EINTR) {
       return;
     } else if (recvErr == EWOULDBLOCK) {
@@ -47,7 +47,7 @@ void ForwardSocketData::receiveBuf(bool &bufIsFull,
   willBlock = false;
   endRecv += numRecv;
 
-  if (endRecv >= TOT_BUF_SIZE) {
+  if (endRecv >= (ssize_t)TOT_BUF_SIZE) {
     endRecv = 0;
   }
 
@@ -65,7 +65,7 @@ void ForwardSocketData::sendBuf(bool &bufIsEmpty, bool &willBlock, int flags) {
 
   // Handle error cases
   if (numSent <= 0) {
-    errno_t sendErr = errno;
+    int sendErr = errno;
     if (sendErr == EINTR) {
       return;
     } else if (sendErr == EWOULDBLOCK) {
@@ -80,7 +80,7 @@ void ForwardSocketData::sendBuf(bool &bufIsEmpty, bool &willBlock, int flags) {
   willBlock = false;
   nxtSend += numSent;
 
-  if (nxtSend >= TOT_BUF_SIZE) {
+  if (nxtSend >= (ssize_t)TOT_BUF_SIZE) {
     nxtSend = 0;
   }
 
@@ -88,10 +88,10 @@ void ForwardSocketData::sendBuf(bool &bufIsEmpty, bool &willBlock, int flags) {
 }
 
 void ForwardSocketData::start() {
-  bool bufferEmpty; ///< Indicates an empty buffer
-  bool bufferFull;  ///< Indicates a full buffer
-  bool willBlock;   ///< Indicates that a blocking call would have occurred
-  bool isEOF;       ///< Indicates that no more can be received
+  bool bufferEmpty = false; ///< Indicates an empty buffer
+  bool bufferFull = false;  ///< Indicates a full buffer
+  bool willBlock = false;   ///< Indicates that a blocking call would have occurred
+  bool isEOF = false;       ///< Indicates that no more can be received
 
   // Continue until an error
   while(!haveError)

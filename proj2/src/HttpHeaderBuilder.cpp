@@ -55,7 +55,7 @@ std::unique_ptr<HttpRequest> HttpHeaderBuilder::receiveHeader() {
 
     // If the scan didn't succeed, return to caller
     if (lineScanResult <= 0) {
-      errno_t scanErr = errno;
+      int scanErr = errno;
       if (scanErr != EINTR && scanErr != EAGAIN) {
         LOG_ERROR("Failure reading a line, can't create header..");
         return makeErrorHeader(HttpRequestStatus::HeaderError);

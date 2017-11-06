@@ -16,6 +16,7 @@
 #include <sstream>
 #include <cstring>
 #include <vector>
+#include <memory>
 #include <ScopeGuard.h>
 #include <ForwardSocketData.h>
 #include "HttpRequest.h"

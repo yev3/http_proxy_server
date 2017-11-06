@@ -12,6 +12,7 @@
 
 #include <string>
 #include <cassert>
+#include <memory>
 #include "HttpRequest.h"
 #include "LineScanner.h"
 
