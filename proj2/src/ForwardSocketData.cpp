@@ -1,25 +1,36 @@
+////////////////////////////////////////////////////////////////////////////////
+// Project2, CPSC 5510 Networking, Seattle University
+// Team: Zach Madigan, David Pierce, and Yevgeni Kamenski
 //
-// Created by Yevgeni Kamenski on 11/5/17.
+// ForwardSocketData.cpp
+// Forwards the socket data using a circular buffer.
 //
+// This is free and unencumbered software released into the public domain.
+////////////////////////////////////////////////////////////////////////////////
 
 #include "ForwardSocketData.h"
-ForwardSocketData::ForwardSocketData(int srcFd, int dstFd) : srcFd_(srcFd), dstFd_(dstFd) {
 
-}
+ForwardSocketData::ForwardSocketData(int srcFd, int dstFd)
+    : srcFd_(srcFd), dstFd_(dstFd) { }
+
 void ForwardSocketData::receiveBuf(bool &bufIsFull,
                                    bool &willBlock,
                                    bool &eof,
                                    int flags) {
+  // Max bytes that can receive
   ssize_t maxRecv = (nxtSend <= endRecv) ?
                     (ssize_t)TOT_BUF_SIZE - endRecv :
                     nxtSend - endRecv;
 
+  // Receive into buffer
   ssize_t numRecv = recv(srcFd_, buf + endRecv, (size_t)(maxRecv), flags);
 
+  // Determine if EOF reached
   eof = numRecv == 0;
   if (eof)
     return;
 
+  // Handle errors
   if (numRecv < 0) {
     errno_t recvErr = errno;
     if (recvErr == EINTR) {
@@ -42,13 +53,17 @@ void ForwardSocketData::receiveBuf(bool &bufIsFull,
 
   bufIsFull = endRecv == nxtSend;
 }
+
 void ForwardSocketData::sendBuf(bool &bufIsEmpty, bool &willBlock, int flags) {
+  // Max bytes that can send
   ssize_t maxSend = (nxtSend < endRecv) ?
                     endRecv - nxtSend :
                     (ssize_t)TOT_BUF_SIZE - nxtSend;
 
+  // Send bytes from buffer
   ssize_t numSent = send(dstFd_, buf + nxtSend, (size_t)(maxSend), flags);
 
+  // Handle error cases
   if (numSent <= 0) {
     errno_t sendErr = errno;
     if (sendErr == EINTR) {
@@ -71,21 +86,23 @@ void ForwardSocketData::sendBuf(bool &bufIsEmpty, bool &willBlock, int flags) {
 
   bufIsEmpty = nxtSend == endRecv;
 }
-void ForwardSocketData::start() {
-  bool bufferEmpty;
-  bool bufferFull;
-  bool willBlock;
-  bool isEOF;
 
+void ForwardSocketData::start() {
+  bool bufferEmpty; ///< Indicates an empty buffer
+  bool bufferFull;  ///< Indicates a full buffer
+  bool willBlock;   ///< Indicates that a blocking call would have occurred
+  bool isEOF;       ///< Indicates that no more can be received
+
+  // Continue until an error
   while(!haveError)
   {
     if (curState == States::Empty)
     {
       receiveBuf(bufferFull, willBlock, isEOF, 0);
 
-      // when reached the end of file and
+      // buffer is empty, so on EOF nothing more to do
       if (isEOF) {
-        return;
+        break;
       }
 
       if (bufferFull) {
