@@ -29,7 +29,7 @@
 void handleError(int fd, const char *errorMsg);
 
 /**
- * \brief Handles the user's TCP connection
+ * \brief Handles the user's TCP connection on a separate thread
  * \param clientFd Client socket file descriptor
  */
 static void * handleConnectionOn(void * fd);
@@ -65,12 +65,8 @@ int main(int argc, char *argv[]) {
   std::cout << "Listening for clients on port " << portNo
             << ", use <CTRL>-C to quit." << std::endl;
 
-  /*
-   * For Milestone 1, process only 1 connection at a time
-   */
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-noreturn"
+  #pragma clang diagnostic push
+  #pragma clang diagnostic ignored "-Wmissing-noreturn"
   while (true) {
     int clientFd;
     do {
@@ -80,6 +76,7 @@ int main(int argc, char *argv[]) {
       }
     } while (clientFd < 0);
 
+    // create pthreads to handle multiple connections
     pthread_t thr;
     pthread_attr_t attr{};
     int status;
@@ -121,26 +118,9 @@ static void * handleConnectionOn(void *fd) {
       const std::string requestStr = usrRequest.getRequestStr();
       writeString(conn.fd(), requestStr);
 
-      // TODO - remove, testing
-      {
-        std::stringstream requestStrm{requestStr};
-        std::string requestLine;
-        std::getline(requestStrm, requestLine);
-        LOG_TRACE("%3d Requested: %s", clientFd, requestLine.c_str());
-      }
-
       // Receive the response from the server
       std::stringstream response; 
       ssize_t bytesRead = receiveResponseHeaders(conn.fd(), response);
-
-      // TODO - remove, testing
-      {
-        LOG_TRACE("%3d Response header size: %d", conn.fd(), (int)bytesRead);
-        std::stringstream responseStrmCpy{response.str()};
-        std::string responseLine;
-        std::getline(responseStrmCpy, responseLine);
-        LOG_TRACE("%3d Response: %s", conn.fd(), responseLine.c_str());
-      }
 
       // Send headers back to the original client
       std::string responseStr = response.str();
