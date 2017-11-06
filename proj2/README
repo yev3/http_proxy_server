@@ -44,7 +44,7 @@ Yevgeni Kamenski, Zachary Madigan, David Pierce
     a default value of 80.
     
     After parsing the request, it recieves and tunnels the host server's
-    response directly to the client file descriptor using a 4KB buffer size.
+    response directly to the client file descriptor using a 8kb buffer size.
 	
 ## STRENGTHS
 	- Code is extensible and modular
@@ -84,3 +84,9 @@ Yevgeni Kamenski, Zachary Madigan, David Pierce
 
 ### David Pierce
 	- Debugging, testing, cleanup
+
+### Yevgeni Kamenski
+        - Threading implementation
+        - Object oriented design
+        - Circular buffer implementation
+	- Researched different strategies to increase performance
