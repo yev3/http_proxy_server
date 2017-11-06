@@ -1,3 +1,13 @@
+////////////////////////////////////////////////////////////////////////////////
+// Project2, CPSC 5510 Networking, Seattle University
+// Team: Zach Madigan, David Pierce, and Yevgeni Kamenski
+//
+// helpers.h
+// Miscellaneous helper functions for convenience.
+//
+// This is free and unencumbered software released into the public domain.
+////////////////////////////////////////////////////////////////////////////////
+
 #pragma once
 #include <cstdlib>
 #include <cstring>

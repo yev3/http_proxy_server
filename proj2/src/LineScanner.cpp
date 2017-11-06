@@ -1,6 +1,12 @@
+////////////////////////////////////////////////////////////////////////////////
+// Project2, CPSC 5510 Networking, Seattle University
+// Team: Zach Madigan, David Pierce, and Yevgeni Kamenski
 //
-// Created by Yevgeni Kamenski on 11/5/17.
+// LineScanner.cpp
+// Aids in retrieving lines from a socket.
 //
+// This is free and unencumbered software released into the public domain.
+////////////////////////////////////////////////////////////////////////////////
 
 #include <helpers.h>
 #include "LineScanner.h"

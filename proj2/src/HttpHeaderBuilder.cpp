@@ -1,6 +1,12 @@
+////////////////////////////////////////////////////////////////////////////////
+// Project2, CPSC 5510 Networking, Seattle University
+// Team: Zach Madigan, David Pierce, and Yevgeni Kamenski
 //
-// Created by Yevgeni Kamenski on 11/5/17.
+// HttpHeaderBuilder.cpp
+// Aids in creation of the HttpHeaders.
 //
+// This is free and unencumbered software released into the public domain.
+////////////////////////////////////////////////////////////////////////////////
 
 #include "HttpHeaderBuilder.h"
 
@@ -11,12 +17,6 @@ HttpHeaderBuilder::makeErrorHeader(HttpRequestStatus errStatus) {
   curState = States::HeaderEnd;
   return std::unique_ptr<HttpRequest>(new HttpRequest(errStatus));
 }
-
-//std::unique_ptr<HttpRequest> HttpHeaderBuilder::request() {
-//  assert(curState == States::HeaderEnd);
-//  assert(request_);
-//  return std::move(request_);
-//}
 
 std::unique_ptr<HttpRequest>
 HttpHeaderBuilder::makeHeaderFromRequest (std::string&& line) {

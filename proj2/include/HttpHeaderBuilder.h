@@ -1,6 +1,12 @@
+////////////////////////////////////////////////////////////////////////////////
+// Project2, CPSC 5510 Networking, Seattle University
+// Team: Zach Madigan, David Pierce, and Yevgeni Kamenski
 //
-// Created by Yevgeni Kamenski on 11/5/17.
+// HttpHeaderBuilder.h
+// Aids in creation of the HttpHeaders.
 //
+// This is free and unencumbered software released into the public domain.
+////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
 
@@ -25,6 +31,10 @@ class HttpHeaderBuilder {
    */
   std::unique_ptr<HttpRequest> receiveHeader();
 
+  /**
+   * \brief Get the request line used to create the header
+   * \return Raw string sent in the request
+   */
   const std::string& requestLine();
 
  private:

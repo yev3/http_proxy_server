@@ -104,9 +104,6 @@ int main(int argc, char *argv[]) {
   if (hasError)
     errorExit(hasError, "pthread_attr_setdetachstate");
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-noreturn"
-
   /*
    * Begin to accept connections, spawning a new detached thread for each client
    */
@@ -124,8 +121,6 @@ int main(int argc, char *argv[]) {
                               handleConnectionOn, (void *) (intptr_t) clientFd);
     if (hasError) errorExit(hasError, "pthread_create");
   }
-
-#pragma clang diagnostic pop
 }
 
 void configureSignals() {
@@ -163,7 +158,6 @@ static void * handleConnectionOn(void *fd) {
   HttpHeaderBuilder builder {requestLines};
   std::unique_ptr<HttpRequest> req = builder.receiveHeader();
 
-  // TODO - remove, testing
   LOG_TRACE("%3d Req line: %s", clientFd, builder.requestLine().c_str());
 
   if (req->isValid()) {
@@ -192,11 +186,8 @@ static void * handleConnectionOn(void *fd) {
       writeBuffer(clientFd, respLines.leftoverBuf(), respLines.leftoverSize());
 
       // Act like a tunnel until the connection is closed by the site
-//      copyUntilEOF(remoteConn.fd(), clientFd);
       ForwardSocketData fwd{remoteConn.fd(), clientFd};
       fwd.start();
-
-      // prettyPrintHttpResponse(response, 10);
 
     } else {
       // Send back 500 with info about connecting 
