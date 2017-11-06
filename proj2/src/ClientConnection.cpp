@@ -29,7 +29,6 @@ ClientConnection::ClientConnection(const char* hostname, const int port) {
   }
 }
 
-
 ClientConnection::~ClientConnection() {
   if (sockFd != -1) {
     close(sockFd);

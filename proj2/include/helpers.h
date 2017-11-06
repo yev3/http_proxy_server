@@ -59,24 +59,6 @@ void errorExit(const char* msg);
 void errorExit(int errNo, const char* msg);
 
 /**
- * \brief reads a line
- * \param fd file descriptor to read from
- * \param inStrm buffer to store
- * \return number of chars actually read
- */
-ssize_t readLineIntoStrm(int fd, std::stringstream &inStrm);
-
-/**
- * \brief 
- * \param fd file descriptor to write stream to
- * \param strm stream object data to write to fd
- * \param size number of characters from stream to write
- * \return 
- */
-ssize_t writeStrm(int fd, std::iostream &strm, int size);
-
-
-/**
  * \brief writes all bytes in buffer to file descriptor. Implementation 
  * borrowed from: http://man7.org/tlpi/code/online/dist/sockets/rdwrn.c.html
  * \param fd file descriptor
@@ -94,36 +76,3 @@ ssize_t writeBuffer(int fd, const void *buffer, size_t bufSize);
  */
 ssize_t writeString(int fd, const std::string& str);
 
-/**
- * \brief Copies lines from a file descriptor to the STDOUT. Does not allow
- * the output to exceed 80 chars. Displays all headers. Displays the first
- * 5 lines and the last 2 lines of the body or entire body, whichever is
- * smaller.
- * \param fd source file descriptor
- * \param displayLimit maximum number of lines to display
- * \return 0 on success, errno otherwise
- */
-int prettyPrintHttpResponse(int fd,
-                            int displayLimit = std::numeric_limits<int>::max());
-
-int prettyPrintHttpResponse(std::stringstream& strm,
-                            int displayLimit = std::numeric_limits<int>::max());
-
-/**
- * \brief Copies characters into the specified stream until encountering
- * the end of request header marker. (the first <CR><LN>)
- * \param fd source file descriptor
- * \param strm output stream
- * \return Number of bytes read or -1 if an error occurred.
- */
-ssize_t receiveResponseHeaders(int fd, std::stringstream &strm);
-
-/**
- * \brief Copies all bytes from the source file descriptor into the
- * destination file descriptor until the source socket disconnects or an
- * error occurs.
- * \param fdSrc source file descriptor
- * \param fdDst destination file descriptor
- * \return number of bytes read or -1 if error occurred.
- */
-ssize_t copyUntilEOF(int fdSrc, int fdDst);
