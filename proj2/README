@@ -13,14 +13,14 @@ Yevgeni Kamenski, Zachary Madigan, David Pierce
 
 ## DESCRIPTION
     Proxy listens on the user-specified port, and uses multithreading to
-	establish connections to multiple clients. It receives client HTTP
-	requests formated like:
+    establish connections to multiple clients. It receives client HTTP
+    requests formated like:
         GET http://www.cnn.com/ HTTP/1.0
 
     It parses the client's HTTP request and makes a TCP connection to the
     requested server, and returns the response to the client, along with all
-	connected source files and media referenced, allowing for the client to
-	load and browse entire websites.
+    connected source files and media referenced, allowing for the client to
+    load and browse entire websites.
 
 ## DETAILED DESCRIPTION
     When proxy receives HTTP headers, it expects the first line to be the
@@ -42,9 +42,9 @@ Yevgeni Kamenski, Zachary Madigan, David Pierce
     Any encountered user info sections are discarded as they are part of the
     request headers, but port is extracted if present, otherwise it is set to
     a default value of 80.
-	
-	After parsing the request, it recieves and tunnels the host server's
-	response directly to the client file descriptor using a 4KB buffer size.
+    
+    After parsing the request, it recieves and tunnels the host server's
+    response directly to the client file descriptor using a 4KB buffer size.
 	
 ## STRENGTHS
 	- Code is extensible and modular
