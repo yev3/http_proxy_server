@@ -41,7 +41,7 @@ void cleanExit(int sig) {
 void handleError(int fd, const char *errorMsg);
 
 /**
- * \brief Handles the user's TCP connection
+ * \brief Handles the user's TCP connection on a separate thread
  * \param clientFd Client socket file descriptor
  */
 static void * handleConnectionOn(void * fd);

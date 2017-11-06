@@ -10,6 +10,11 @@
 
 #include "HttpRequest.h"
 
+/**
+ * \brief Gets the http status and delivers human readable message
+ * \param status HttpRequestStatus received
+ * \return char string of a human-readable status message
+ */
 const char *getHttpRequestStatusStr(const HttpRequestStatus status) {
   switch (status) {
   case HttpRequestStatus::Success: 
@@ -31,7 +36,7 @@ std::ostream& operator<<(std::ostream& strm, const Header& header) {
   strm << header.name << ": " << header.value;
   return strm;
 }
-
+]
 HttpRequest::HttpRequest(HttpRequestStatus status) {
   parseStatus = status;
 }
