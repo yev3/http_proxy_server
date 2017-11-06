@@ -3,8 +3,8 @@
 // Team: Zach Madigan, David Pierce, and Yevgeni Kamenski
 // 
 // AddrInfo.h
-// Holds the DNS resolution entries.
-// 
+// Helper to perform DNS resolution and traverse the results.
+//
 // This is free and unencumbered software released into the public domain.
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -15,7 +15,7 @@
 #include "helpers.h"
 
 /**
- * \brief Simple helper to traverse the addrinfo linked list
+ * \brief Performs DNS resolutions and traverses the results
  */
 class AddrInfo
 {
@@ -25,9 +25,14 @@ public:
    * Note: the host address is the wildcard ip address of the system
    * \param port port number
    */
-  explicit AddrInfo(const int port);
+  explicit AddrInfo(int port);
 
-  explicit AddrInfo(const char* host, const int port);
+  /**
+   * \brief constructs a linked list of addrinfo structures that can be traversed
+   * \param host Host to resolve the address of
+   * \param port port number
+   */
+  explicit AddrInfo(const char* host, int port);
 
   /**
    * \brief Frees up memory of addrinfo structures upon desctruction

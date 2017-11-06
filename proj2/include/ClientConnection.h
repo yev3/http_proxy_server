@@ -3,8 +3,8 @@
 // Team: Zach Madigan, David Pierce, and Yevgeni Kamenski
 // 
 // ClientConnection.h
-// Client connection class to abstract the system calls. File descriptor is
-// closed on instance destruction.
+// Responsible for establishing a connection to the given address and
+// port. Socket is closed on instance destruction.
 // 
 // This is free and unencumbered software released into the public domain.
 ////////////////////////////////////////////////////////////////////////////////
@@ -24,7 +24,7 @@ public:
   * \param hostname host name of server to connect to
   * \param port port number that the server is listening on
   */
-  explicit ClientConnection(const char* hostname, const int port);
+  explicit ClientConnection(const char* hostname, int port);
 
   /**
    * \brief closes any active connected sockets

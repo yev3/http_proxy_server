@@ -34,7 +34,7 @@ enum class HttpRequestStatus {
  * \param status one of the Http status codes
  * \return c-style string of the description
  */
-const char *getHttpRequestStatusStr(const HttpRequestStatus status);
+const char *getHttpRequestStatusStr(HttpRequestStatus status);
 
 /**
  * \brief Holds a single header line
@@ -66,7 +66,7 @@ public:
    * \param clientFd Socket or file descriptor to create from
    * \return Initialized HttpRequest 
    */
-  static HttpRequest createFrom(const int clientFd);
+//  static HttpRequest createFrom(int clientFd);
 
   /**
    * \brief dtor.
@@ -105,9 +105,8 @@ public:
   * \brief returns the status of the http request afer parsing
   * \return status of either success or explaining any errors
   */
-  const char* statusStr() const;
+  const char* getErrorStr() const;
 
-private:
 
   /**
    * \brief Creates an HttpRequest when there is an error parsing it
@@ -134,12 +133,12 @@ private:
    */
   bool appendHeader(std::string&& line);
 
+ private:
   HttpRequestStatus parseStatus;    ///< Status of the parsing
   std::vector<Header> headers;      ///< Container for header lines
   std::string type;                 ///< GET / POST / CONNECT, etc..
   std::string protocol;             ///< such as HTTP/1.0
   HttpUri url;                      ///< parsed url
-
 };
 
 

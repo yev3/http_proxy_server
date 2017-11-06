@@ -3,8 +3,8 @@
 // Team: Zach Madigan, David Pierce, and Yevgeni Kamenski
 // 
 // AddrInfo.cpp
-// Holds the DNS resolution entries.
-// 
+// Helper to perform DNS resolution and traverse the results.
+//
 // This is free and unencumbered software released into the public domain.
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -27,7 +27,6 @@ addrinfo * resolveAddrInfo(const char * host, const int port) {
   hints.ai_canonname = nullptr;
   hints.ai_addr = nullptr;
   hints.ai_next = nullptr;
-
 
   if (getaddrinfo(host, portStr.c_str(), &hints, &result)) {
     LOG_ERROR("getaddrinfo");

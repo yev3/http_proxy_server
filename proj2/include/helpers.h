@@ -109,21 +109,21 @@ int prettyPrintHttpResponse(int fd,
 int prettyPrintHttpResponse(std::stringstream& strm,
                             int displayLimit = std::numeric_limits<int>::max());
 
-
 /**
-* \brief Copies lines from a file descriptor to a stringstream. This will copy
-* \all lines until the first \r\n is found.
-* \param fd source file descriptor
-* \param strm stringstream to write
-* \return number of bytes read
-*/
+ * \brief Copies characters into the specified stream until encountering
+ * the end of request header marker. (the first <CR><LN>)
+ * \param fd source file descriptor
+ * \param strm output stream
+ * \return Number of bytes read or -1 if an error occurred.
+ */
 ssize_t receiveResponseHeaders(int fd, std::stringstream &strm);
 
 /**
-* \brief Reads lines from a file descriptor and writes them to a file
-* \descriptor.
-* \param fd source file descriptor
-* \param fd destination file descriptor
-* \return number of bytes read
-*/
+ * \brief Copies all bytes from the source file descriptor into the
+ * destination file descriptor until the source socket disconnects or an
+ * error occurs.
+ * \param fdSrc source file descriptor
+ * \param fdDst destination file descriptor
+ * \return number of bytes read or -1 if error occurred.
+ */
 ssize_t copyUntilEOF(int fdSrc, int fdDst);
