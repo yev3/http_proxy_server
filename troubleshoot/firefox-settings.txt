@@ -1,2 +1,0 @@
-network.http.proxy.version      1.0
-network.tcp.keepalive.enabled   false
