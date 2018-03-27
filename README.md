@@ -30,11 +30,11 @@ make debug
 |HttpRequest.cpp      | Parses request headers over a stream
 |HttpResponse.cpp     | Generates HTTP error responses
 |HttpUri.cpp          | Parses and sanitizes URIs
-|ListenConnection.cpp | Wrapper over POSIX sockets api
+|ListenConnection.cpp | Wrapper over POSIX sockets API
 |helpers.cpp          | Miscellaneous helper methods
 |proxy.cpp            | Main entry point of the proxy program
 
-## Design Notes
+### Design Notes
 
 - HTTP headers are parsed is IAW RFC-3986
 - URI is parsed and decomposed into section IAW page 6 of RFC-3986:
